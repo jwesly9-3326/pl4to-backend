@@ -1,0 +1,40 @@
+﻿{
+  "renseignement": {
+    "nom": "Jhon Wesly Désir",
+    "email": "jhon@gpsfinancier.com"
+  },
+  "comptes": [
+    {
+      "nom": "Scotia-Debit",
+      "soldeInitial": 1000
+    },
+    {
+      "nom": "Scotia-Épargne",
+      "soldeInitial": 5000
+    }
+  ],
+  "activites": [
+    {
+      "compte": "Scotia-Debit",
+      "entrees": [
+        {
+          "nom": "Salaire",
+          "montant": 3000,
+          "frequence": "Mensuel",
+          "jourDuMois": 15
+        }
+      ],
+      "sorties": [
+        {
+          "nom": "Loyer",
+          "montant": 1200,
+          "frequence": "Mensuel",
+          "jourDuMois": 1
+        }
+      ]
+    }
+  ],
+  "planification": {},
+  "projectionsCalculs": {},
+  "objectifsFinanciers": []
+}

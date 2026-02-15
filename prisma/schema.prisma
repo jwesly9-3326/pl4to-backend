@@ -1,0 +1,606 @@
+// 🎯 GPS FINANCIER - SCHÉMA PRISMA COMPLET
+// Date: 5 novembre 2025
+// Développeur: Jhon Wesly Désir
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// ============================================
+// 1. TABLE USER - Utilisateurs
+// ============================================
+model User {
+  id             String   @id @default(uuid())
+  nom            String
+  prenom         String
+  email          String   @unique
+  password       String
+  isAdmin           Boolean  @default(false)  // 🔒 Flag admin pour accès dashboard
+  unlimitedAccess   Boolean  @default(false)  // 🔓 Accès illimité sans abonnement (démo/interne)
+  googleId       String?  @unique          // 🔐 Google OAuth ID
+  profilePicture String?                   // 🖼️ Photo de profil Google
+  
+  // 📧 Vérification Email
+  emailVerified          Boolean   @default(false)  // Email vérifié?
+  verificationCode       String?                    // Code à 6 chiffres
+  verificationCodeExpires DateTime?                 // Expiration du code (15 min)
+  
+  // 🔑 Réinitialisation mot de passe
+  resetToken             String?                    // Token de réinitialisation
+  resetTokenExpires      DateTime?                  // Expiration du token (1 heure)
+  
+  // 🔐 Authentification à deux facteurs (2FA)
+  twoFactorEnabled       Boolean   @default(false)  // 2FA activé?
+  twoFactorSecret        String?                    // Secret TOTP (encrypté)
+  twoFactorBackupCodes   String[]  @default([])     // Codes de secours (hashés)
+  
+  // 🔒 Token Version (pour invalidation de toutes les sessions)
+  tokenVersion           Int       @default(0)      // Incrémenté pour invalider tous les tokens
+  
+  language        String   @default("fr")   // Langue préférée (fr, en)
+  emailOptOut     Boolean  @default(false)  // Ne plus recevoir d'emails trial
+  
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  // ===== SUBSCRIPTION & TRIAL =====
+  subscriptionPlan    String    @default("discovery")  // discovery, essential, pro
+  trialStartDate      DateTime?                         // Date début trial
+  trialEndDate        DateTime?                         // Date fin trial (14 jours après start)
+  trialActive         Boolean   @default(false)        // Trial en cours
+  planChosen          Boolean   @default(false)        // User a choisi un plan (fin trial)
+  isBetaFounder       Boolean   @default(false)        // Réduction Beta Founder
+  subscriptionStartDate DateTime?                       // Date début abonnement payant
+  subscriptionEndDate   DateTime?                       // Date fin abonnement (si applicable)
+  
+  // ===== STRIPE =====
+  stripeCustomerId      String?   @unique              // ID client Stripe
+  stripeSubscriptionId  String?                         // ID abonnement Stripe actif
+  subscriptionStatus    String?                         // active, past_due, canceled, etc.
+  cancelAtPeriodEnd     Boolean   @default(false)      // Annulation prévue à la fin de la période
+  
+  // ===== RAPPELS TRIAL =====
+  trialWelcomeShown      Boolean   @default(false)     // Popup initial déjà affiché
+  trialReminder7DaysAt   DateTime?                      // Date du rappel 7 jours (si demandé)
+  trialReminder2DaysShown Boolean  @default(false)     // Rappel 2 jours déjà affiché
+  trialRemindersStopped  Boolean   @default(false)     // Rappels désactivés (plan choisi)
+
+  // ===== COMMUNICATIONS HEBDOMADAIRES =====
+  weeklyReportEnabled    Boolean   @default(false)    // Opt-in résumé hebdomadaire
+  weeklyReportDay        Int       @default(1)        // Jour d'envoi: 0=Dim, 1=Lun, 2=Mar, 3=Mer, 4=Jeu, 5=Ven, 6=Sam
+  calendarEmailEnabled   Boolean   @default(false)    // Opt-in emails événements calendrier
+  lastWeeklyReportAt     DateTime?                     // Dernier résumé envoyé
+  lastCalendarEmailAt    DateTime?                     // Dernier email calendrier envoyé
+
+  // Relations
+  session              Session?
+  budgetSegments       BudgetSegment[]
+  budgetModifications  BudgetModification[]
+  userData             UserData?
+  optimizationRequests OptimizationRequest[]  // Demandes d'optimisation
+  trialEmailsSent      TrialEmailSent[]       // Emails trial envoyés
+  communicationsSent   CommunicationEmail[]   // Emails de communication envoyés
+  
+  // 🏢 Relations Enterprise
+  organizationMembers  OrganizationMember[]   // Organisations auxquelles ce user appartient
+  managedClients       ClientProfile[]        // Clients gérés par ce conseiller
+
+  @@map("users")
+}
+
+// ============================================
+// 2. TABLE SESSION - Session GPS unique par user
+// ============================================
+model Session {
+  id           String   @id @default(uuid())
+  sessionId    String   @unique
+  userId       String   @unique
+  nom          String?
+  dateCreation DateTime @default(now())
+  statut       String   @default("en_cours")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Relations
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  comptes      Compte[]
+  timeline     Timeline[]
+  projections  Projection[]
+  gpsSnapshots GpsSnapshot[]
+
+  @@map("sessions")
+  @@index([sessionId])
+  @@index([userId])
+}
+
+// ============================================
+// 3. TABLE COMPTE - Comptes bancaires
+// ============================================
+model Compte {
+  id            String   @id @default(uuid())
+  sessionId     String
+  nom           String
+  soldeInitial  Decimal  @db.Decimal(12, 2)
+  ordre         Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Relations
+  session     Session      @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  activites   Activite[]
+  projections Projection[]
+
+  @@map("comptes")
+  @@index([sessionId])
+  @@index([sessionId, nom])
+}
+
+// ============================================
+// 4. TABLE ACTIVITE - Activités financières
+// ============================================
+model Activite {
+  id          String   @id @default(uuid())
+  compteId    String
+  nom         String
+  type        String
+  nomComplet  String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  compte         Compte          @relation(fields: [compteId], references: [id], onDelete: Cascade)
+  planifications Planification[]
+
+  @@map("activites")
+  @@index([compteId])
+  @@index([compteId, type])
+  @@index([nomComplet])
+}
+
+// ============================================
+// 5. TABLE PLANIFICATION - Budget mensuel
+// ============================================
+model Planification {
+  id          String   @id @default(uuid())
+  activiteId  String
+  montant     Decimal  @db.Decimal(12, 2)
+  frequence   String
+  jourDuMois  Int
+  type        String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  activite Activite @relation(fields: [activiteId], references: [id], onDelete: Cascade)
+
+  @@map("planifications")
+  @@index([activiteId])
+  @@index([activiteId, frequence])
+}
+
+// ============================================
+// 6. TABLE TIMELINE - Calendrier des dates
+// ============================================
+model Timeline {
+  id          String   @id @default(uuid())
+  sessionId   String
+  date        DateTime @db.Date
+  jourSemaine String
+  index       Int
+  createdAt   DateTime @default(now())
+
+  // Relations
+  session Session @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@map("timeline")
+  @@unique([sessionId, date])
+  @@index([sessionId])
+  @@index([sessionId, date])
+  @@index([sessionId, index])
+}
+
+// ============================================
+// 7. TABLE PROJECTION - Calculs financiers
+// ============================================
+model Projection {
+  id         String   @id @default(uuid())
+  sessionId  String
+  compteId   String
+  date       DateTime @db.Date
+  entrees    Decimal  @db.Decimal(12, 2) @default(0)
+  sorties    Decimal  @db.Decimal(12, 2) @default(0)
+  solde      Decimal  @db.Decimal(12, 2)
+  variation  Decimal  @db.Decimal(12, 2) @default(0)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  // Relations
+  session Session @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  compte  Compte  @relation(fields: [compteId], references: [id], onDelete: Cascade)
+
+  @@map("projections")
+  @@unique([sessionId, compteId, date])
+  @@index([sessionId])
+  @@index([compteId])
+  @@index([sessionId, date])
+  @@index([compteId, date])
+}
+
+// ============================================
+// 8. TABLE GPS_SNAPSHOT - GPS complets sauvegardés
+// ============================================
+model GpsSnapshot {
+  id              String   @id @default(uuid())
+  sessionId       String
+  dateGeneration  DateTime @default(now())
+  donneesJson     Json
+  statut          String   @default("actif")
+  createdAt       DateTime @default(now())
+
+  // Relations
+  session Session @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@map("gps_snapshots")
+  @@index([sessionId])
+  @@index([sessionId, dateGeneration])
+}
+
+model BudgetSegment {
+  id          String   @id @default(uuid())
+  userId      String
+  segmentIndex Int
+  name        String?
+  startDate   DateTime
+  endDate     DateTime?
+  entrees     Json
+  sorties     Json
+  isBase      Boolean  @default(false)
+  copiedFrom  Int?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, segmentIndex])
+  @@index([userId])
+  @@index([userId, startDate])
+  @@map("budget_segments")
+}
+
+// ============================================
+// 10. TABLE BUDGET_MODIFICATION - Modifications planifiées
+// ============================================
+model BudgetModification {
+  id            String   @id @default(uuid())
+  userId        String
+  effectiveDate DateTime @db.Date
+  description   String?
+  modifications Json     // { entrees: [...], sorties: [...] }
+  status        String   @default("pending") // pending, applied, rejected
+  createdAt     DateTime @default(now())
+  appliedAt     DateTime?
+  
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@unique([userId, effectiveDate])
+  @@index([userId])
+  @@index([userId, status])
+  @@index([userId, effectiveDate])
+  @@map("budget_modifications")
+}
+
+// ============================================
+// 11. TABLE USER_DATA - Données utilisateur complètes (onboarding + budget)
+// ============================================
+model UserData {
+  id              String   @id @default(uuid())
+  userId          String   @unique
+  userInfo        Json?    // { prenom, age, situationFamiliale, nom, personnesCharge, etc. }
+  accounts        Json?    // [{ id, nom, type, ... }]
+  initialBalances Json?    // { dateDepart, soldes: [{ accountName, accountType, solde }] }
+  financialGoals  Json?    // [{ id, nom, montant, dateEcheance, ... }]
+  accountActivities Json?  // { accountName: { entrees: [], sorties: [] } }
+  budgetPlanning  Json?    // { entrees: [], sorties: [] }
+  guideProgress   Json?    // { dashboard: true, comptes: true, ... } - Progression du guide
+  onboardingCompleted Boolean @default(false)  // Flag: onboarding terminé
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@map("user_data")
+}
+
+// ============================================
+// 12. TABLE OPTIMIZATION_REQUEST - Demandes d'optimisation parcours
+// Workflow: Utilisateur demande → Admin analyse → Proposition → Acceptation
+// ============================================
+model OptimizationRequest {
+  id              String   @id @default(uuid())
+  requestId       String   @unique  // ID anonyme visible (OPT-2026-001-X7K9)
+  userId          String
+  
+  // ===== PHASE 1: RÉCEPTION =====
+  status          String   @default("pending")  // pending, analyzing, proposal_ready, accepted, rejected, cancelled
+  priority        Int      @default(0)           // 0=normal, 1=urgent, 2=critique
+  
+  // Snapshot des données au moment de la demande (confidentialité)
+  dataSnapshot    Json     // { accounts, initialBalances, budgetPlanning, financialGoals }
+  
+  // ===== PHASE 2: ANALYSE =====
+  analysisStartedAt  DateTime?              // Quand l'admin a commencé l'analyse
+  analysisNotes      String?                // Notes internes de l'admin
+  
+  // Résultats de l'analyse automatique
+  imbalances         Json?    // [{ date, account, amount, type: 'negative'|'overlimit' }]
+  trajectoryIssues   Json?    // [{ startDate, endDate, account, trend: 'declining', percentage }]
+  
+  // ===== PHASE 3: PROPOSITION =====
+  proposalCreatedAt  DateTime?
+  proposalMessage    String?                // Message personnalisé de l'admin
+  proposedChanges    Json?    // { entrees: [...modifications], sorties: [...modifications] }
+  projectedImpact    Json?    // { before: {...}, after: {...}, improvement: {...} }
+  
+  // ===== PHASE 4: RÉPONSE UTILISATEUR =====
+  userResponseAt     DateTime?
+  userResponse       String?  // 'accepted' | 'rejected' | null
+  userFeedback       String?  // Commentaire optionnel de l'utilisateur
+  
+  // Timestamps
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+  completedAt        DateTime?  // Quand le processus est terminé
+  
+  // Relations
+  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@map("optimization_requests")
+  @@index([userId])
+  @@index([status])
+  @@index([createdAt])
+  @@index([userId, status])
+}
+
+// ============================================
+// 13. TABLE TRIAL_HISTORY - Historique des trials (anti-abus)
+// Garde une trace des emails ayant déjà utilisé un trial, même après suppression de compte
+// ============================================
+model TrialHistory {
+  id              String   @id @default(uuid())
+  email           String   @unique  // Email (normalisé en lowercase)
+  trialStartDate  DateTime           // Date de début du trial
+  trialEndDate    DateTime           // Date de fin du trial
+  userId          String?            // User ID (peut être null si compte supprimé)
+  ipAddress       String?            // IP lors du trial (optionnel, pour détection)
+  deviceFingerprint String?          // Empreinte appareil (optionnel)
+  createdAt       DateTime @default(now())
+  
+  @@map("trial_history")
+  @@index([email])
+}
+
+// ============================================
+// 14. TABLE TRIAL_EMAILS_SENT - Tracking des emails trial
+// Évite les doublons et permet le suivi
+// ============================================
+model TrialEmailSent {
+  id         String   @id @default(uuid())
+  userId     String
+  emailType  String   // welcome, first_steps, feature_discovery, reminder_3days, last_day, trial_ended, reactivation
+  sentAt     DateTime @default(now())
+  resendId   String?  // ID retourné par Resend
+  
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@unique([userId, emailType])  // Un seul email de chaque type par utilisateur
+  @@map("trial_emails_sent")
+  @@index([userId])
+  @@index([emailType])
+}
+
+// ============================================
+// 15. TABLE ORGANIZATION - Cabinets / Firmes de conseillers
+// PL4TO Entreprise: structure pour accès multi-clients
+// ============================================
+model Organization {
+  id              String   @id @default(uuid())
+  name            String                        // Nom du cabinet
+  slug            String   @unique              // URL: pro.pl4to.com/cabinet-xyz
+  logoUrl         String?                       // Logo du cabinet pour branding
+  brandColor      String?  @default("#040449")  // Couleur principale pour rapports PDF
+  contactEmail    String                        // Email de contact du cabinet
+  phone           String?                       // Téléphone
+  address         String?                       // Adresse
+  website         String?                       // Site web du cabinet
+  
+  // ===== ABONNEMENT ENTERPRISE =====
+  plan                 String    @default("enterprise")  // enterprise (seul plan B2B pour l'instant)
+  maxSeats             Int       @default(5)              // Nombre max de conseillers
+  stripeCustomerId     String?   @unique                  // ID client Stripe pour facturation
+  stripeSubscriptionId String?                             // ID abonnement Stripe actif
+  subscriptionStatus   String?                             // active, past_due, canceled
+  
+  // ===== MÉTADONNÉES =====
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  // Relations
+  members         OrganizationMember[]
+  clients         ClientProfile[]
+  credentials     EnterpriseCredential[]
+  
+  @@map("organizations")
+  @@index([slug])
+  @@index([isActive])
+}
+
+// ============================================
+// 16. TABLE ORGANIZATION_MEMBER - Lien User ↔ Organization
+// Un User peut être conseiller dans un cabinet ET avoir son propre compte B2C
+// ============================================
+model OrganizationMember {
+  id              String   @id @default(uuid())
+  organizationId  String
+  userId          String
+  
+  role            String   @default("advisor")  // admin, advisor, viewer
+  title           String?                        // Titre: "Planificateur financier", "Courtier", etc.
+  
+  invitedAt       DateTime @default(now())       // Date d'invitation
+  joinedAt        DateTime?                      // Date d'acceptation (null si en attente)
+  isActive        Boolean  @default(true)        // Désactivé sans supprimer
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  // Relations
+  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user            User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@unique([organizationId, userId])  // Un user ne peut être membre qu'une fois par org
+  @@map("organization_members")
+  @@index([organizationId])
+  @@index([userId])
+  @@index([organizationId, role])
+  @@index([organizationId, isActive])
+}
+
+// ============================================
+// 17. TABLE CLIENT_PROFILE - Profil client géré par un conseiller
+// Contient les données financières dans userDataSnapshot (même structure que UserData)
+// Permet au conseiller d'utiliser GPS/Budget/Comptes avec les données du client
+// ============================================
+model ClientProfile {
+  id              String   @id @default(uuid())
+  organizationId  String
+  advisorUserId   String                          // Le conseiller qui gère ce client
+  
+  // ===== INFORMATIONS CLIENT =====
+  prenom          String
+  nom             String
+  email           String?                          // Email du client (optionnel)
+  phone           String?                          // Téléphone
+  notes           String?                          // Notes privées du conseiller
+  
+  // ===== DONNÉES FINANCIÈRES (même structure que UserData) =====
+  // C'est LE point de connexion: GPSFinancier, Budget, Comptes lisent ces données
+  // exactement comme ils lisent UserData pour un utilisateur B2C
+  userDataSnapshot Json?    // {
+                            //   userInfo: { prenom, age, situationFamiliale, ... },
+                            //   accounts: [{ id, nom, type, ... }],
+                            //   initialBalances: { dateDepart, soldes: [...] },
+                            //   financialGoals: [...],
+                            //   accountActivities: { ... },
+                            //   budgetPlanning: { entrees: [], sorties: [] }
+                            // }
+  
+  // ===== PROJECTIONS & SNAPSHOTS =====
+  lastProjectionAt  DateTime?                      // Dernière fois que le GPS a été consulté
+  trajectoryAlerts  Json?    @default("[]")        // Alertes détectées: solde négatif, etc.
+  
+  // ===== STATUT =====
+  status          String   @default("active")      // active, archived, invited
+  
+  // ===== LIEN B2C (boucle acquisition) =====
+  invitedToB2C    Boolean  @default(false)         // Invitation envoyée au client
+  b2cUserId       String?                          // Si le client crée son propre compte PL4TO
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  // Relations
+  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  advisor         User         @relation(fields: [advisorUserId], references: [id], onDelete: Cascade)
+  
+  @@map("client_profiles")
+  @@index([organizationId])
+  @@index([advisorUserId])
+  @@index([organizationId, status])
+  @@index([organizationId, advisorUserId])
+  @@index([b2cUserId])
+}
+
+// ============================================
+// 18. TABLE ENTERPRISE_CREDENTIAL - Identifiants de connexion Enterprise
+// Générés par l'admin PL4TO, envoyés au cabinet
+// Format identifiant: PLT-XXXX-XXXX (ex: PLT-2026-A7K9)
+// ============================================
+model EnterpriseCredential {
+  id              String   @id @default(uuid())
+  organizationId  String
+  identifiant     String   @unique              // PLT-XXXX-XXXX généré par admin
+  passwordHash    String                        // bcrypt hash du mot de passe
+  
+  isActive        Boolean  @default(true)       // Désactivé si révoqué
+  lastLoginAt     DateTime?                     // Dernière connexion
+  loginCount      Int      @default(0)          // Nombre de connexions
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  
+  @@map("enterprise_credentials")
+  @@index([organizationId])
+  @@index([identifiant])
+}
+
+// ============================================
+// 19. TABLE PORTAL_REQUEST - Demandes de portail Enterprise
+// Soumises via /pro/demande, traitées par l'admin PL4TO
+// ============================================
+model PortalRequest {
+  id                String   @id @default(uuid())
+  
+  // Informations du cabinet
+  cabinetName       String
+  contactName       String
+  contactEmail      String
+  contactPhone      String?
+  numberOfAdvisors  Int      @default(1)
+  message           String?
+  
+  // Package choisi
+  selectedPackage   String                      // solo, cabinet, firme
+  
+  // Traitement
+  status            String   @default("pending") // pending, approved, rejected
+  adminNotes        String?                      // Notes de l'admin
+  organizationId    String?                      // Lié après approbation
+  processedAt       DateTime?
+  processedBy       String?                      // userId de l'admin
+  
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  
+  @@map("portal_requests")
+  @@index([status])
+  @@index([contactEmail])
+}
+
+// ============================================
+// COMMUNICATION EMAILS - Suivi des envois
+// ============================================
+model CommunicationEmail {
+  id         String   @id @default(uuid())
+  userId     String?  // Null pour les emails admin
+  emailType  String   // weekly_report, calendar_event, admin_preview_30_days, admin_preview_7_days
+  eventName  String?  // Nom de l'événement (saint-valentin, paques, etc.)
+  sentAt     DateTime @default(now())
+  resendId   String?  // ID retourné par Resend
+  
+  user       User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@map("communication_emails")
+  @@index([userId])
+  @@index([emailType])
+  @@index([sentAt])
+  @@index([eventName])
+}

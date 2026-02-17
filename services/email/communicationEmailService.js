@@ -214,10 +214,10 @@ function getNextEvent(lang = 'fr') {
   if (eventDate <= today) eventDate.setFullYear(eventDate.getFullYear() + 1);
   const daysUntil = Math.ceil((eventDate - today) / (1000 * 60 * 60 * 24));
   
-  const monthsUntil = Math.floor(daysUntil / 30);
+  const monthsUntil = Math.round(daysUntil / 30) || 1;
   const timeUntil = lang === 'fr' 
-    ? (monthsUntil > 0 ? `Dans ${monthsUntil} mois` : `Dans ${daysUntil} jours`)
-    : (monthsUntil > 0 ? `In ${monthsUntil} months` : `In ${daysUntil} days`);
+    ? (daysUntil >= 30 ? `Dans ${monthsUntil} mois` : `Dans ${daysUntil} jours`)
+    : (daysUntil >= 30 ? `In ${monthsUntil} months` : `In ${daysUntil} days`);
   
   return {
     emoji: next.emoji,
@@ -262,9 +262,10 @@ async function sendCalendarEventEmails() {
   
   console.log(`[Communication] 📅 Événement du jour: ${event.name_fr || event.name}`);
   
-  // Trouver tous les utilisateurs vérifiés (envoi automatique lié aux cartes calendrier)
+  // Trouver les utilisateurs opt-in pour emails calendrier
   const users = await prisma.user.findMany({
     where: {
+      calendarEmailEnabled: true,
       emailVerified: true,
       emailOptOut: false
     },
@@ -434,49 +435,99 @@ async function buildUserReport(userId, lang = 'fr') {
   
   const report = {
     weekStart: getWeekStart(lang),
-    gpsStatus: null,
-    gpsMessage: null,
-    accounts: [],
-    budget: null,
+    budgetStatus: null,
     objectifs: [],
-    nextEvent: getNextEvent(lang),
-    alertes: [],
-    funFact: getWeeklyFunFact(lang)
+    nextEvent: getNextEvent(lang)
   };
   
-  if (!userData || !userData.data) return report;
+  if (!userData) return report;
   
   try {
-    const data = typeof userData.data === 'string' ? JSON.parse(userData.data) : userData.data;
+    // Lire les champs JSON séparés de UserData (Prisma)
+    const budgetPlanning = typeof userData.budgetPlanning === 'string' ? JSON.parse(userData.budgetPlanning) : userData.budgetPlanning;
+    const financialGoals = typeof userData.financialGoals === 'string' ? JSON.parse(userData.financialGoals) : userData.financialGoals;
+    const accounts = typeof userData.accounts === 'string' ? JSON.parse(userData.accounts) : userData.accounts;
+    const initialBalances = typeof userData.initialBalances === 'string' ? JSON.parse(userData.initialBalances) : userData.initialBalances;
     
-    // Comptes
-    if (data.comptes && Array.isArray(data.comptes)) {
-      report.accounts = data.comptes.map(c => ({
-        name: c.nomCompte || c.nom || 'Compte',
-        balance: parseFloat(c.solde || c.balance || 0)
-      }));
-    }
+    // Budget - répartition par compte (même logique que Budget.jsx slide 2)
+    const budgetEntrees = budgetPlanning?.entrees || [];
+    const budgetSorties = budgetPlanning?.sorties || [];
     
-    // GPS Status (simplifié)
-    if (report.accounts.length > 0) {
-      const totalBalance = report.accounts.reduce((sum, a) => sum + a.balance, 0);
-      if (totalBalance > 0) {
-        report.gpsStatus = lang === 'fr' ? 'Trajectoire positive ✅' : 'Positive trajectory ✅';
-        report.gpsMessage = lang === 'fr' 
-          ? 'Tes finances sont sur la bonne voie cette semaine.'
-          : 'Your finances are on track this week.';
-      } else {
-        report.gpsStatus = lang === 'fr' ? 'Attention requise ⚠️' : 'Attention needed ⚠️';
-        report.gpsMessage = lang === 'fr'
-          ? 'Ton solde global est négatif. Consulte ton GPS pour ajuster ta trajectoire.'
-          : 'Your overall balance is negative. Check your GPS to adjust your trajectory.';
+    const calcMensuel = (montant, frequence) => {
+      const m = parseFloat(montant) || 0;
+      if (frequence === '1-fois') return 0;
+      switch (frequence) {
+        case 'hebdomadaire': return m * 4;
+        case 'quinzaine': case 'bimensuel': return m * 2;
+        case 'trimestriel': return m / 3;
+        case 'semestriel': return m / 6;
+        case 'annuel': return m / 12;
+        default: return m;
       }
-    } else {
-      report.gpsStatus = lang === 'fr' ? 'En attente de configuration' : 'Awaiting setup';
-      report.gpsMessage = lang === 'fr'
-        ? 'Configure tes comptes pour activer ton GPS Financier!'
-        : 'Set up your accounts to activate your Financial GPS!';
+    };
+    
+    if (budgetEntrees.length > 0 || budgetSorties.length > 0) {
+      // Grouper par compte
+      const map = {};
+      const addToMap = (items, type) => {
+        (items || []).forEach(item => {
+          const key = item.compte || 'Sans compte';
+          if (!map[key]) map[key] = { nom: key, entrees: 0, sorties: 0, type: 'checking' };
+          const mensuel = calcMensuel(item.montant, item.frequence);
+          if (type === 'entrees') map[key].entrees += mensuel;
+          else map[key].sorties += mensuel;
+        });
+      };
+      addToMap(budgetEntrees, 'entrees');
+      addToMap(budgetSorties, 'sorties');
+      
+      // Enrichir avec type de compte
+      const accsArr = accounts || [];
+      Object.values(map).forEach(acc => {
+        const found = accsArr.find(a => a.nom === acc.nom);
+        if (found) acc.type = found.type || 'checking';
+      });
+      
+      // Vérifier si un compte est en orange (déséquilibré)
+      const hasOrange = Object.values(map).some(acc => {
+        const isCredit = acc.type === 'credit';
+        if (isCredit) return (acc.sorties - acc.entrees) > 0; // Dépenses > paiements
+        return (acc.entrees - acc.sorties) < 0; // Sorties > entrées
+      });
+      
+      report.budgetStatus = hasOrange ? 'unbalanced' : 'balanced';
     }
+    
+    // Objectifs - progression % seulement
+    const goals = financialGoals || [];
+    const accs = accounts || [];
+    const soldes = initialBalances?.soldes || [];
+    
+    goals.forEach(goal => {
+      if (!goal.compteAssocie || !goal.montantCible) return;
+      const soldeInfo = soldes.find(s => s.accountName === goal.compteAssocie);
+      const currentBalance = parseFloat(soldeInfo?.solde) || 0;
+      const targetAmount = parseFloat(goal.montantCible) || 0;
+      if (targetAmount === 0) return;
+      
+      const account = accs.find(a => a.nom === goal.compteAssocie);
+      const isCredit = account?.type === 'credit';
+      
+      let progress;
+      if (isCredit) {
+        progress = currentBalance <= targetAmount ? 100 : Math.round((targetAmount / currentBalance) * 100);
+      } else {
+        progress = Math.min(Math.round((currentBalance / targetAmount) * 100), 100);
+      }
+      
+      report.objectifs.push({
+        name: goal.nom,
+        progress: Math.max(0, progress),
+        isReached: progress >= 100
+      });
+    });
+    
+    console.log('[Communication] Report built:', { budgetStatus: report.budgetStatus, objectifsCount: report.objectifs.length });
     
   } catch (err) {
     console.error(`[Communication] Erreur parsing données user ${userId}:`, err.message);
@@ -682,10 +733,42 @@ function getNextEventAfter(currentEvent, lang = 'fr') {
   };
 }
 
+// ============================================
+// TEST: Envoyer un rapport hebdo à un utilisateur spécifique
+// ============================================
+async function sendTestWeeklyReport(userId) {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { id: true, prenom: true, email: true, language: true }
+  });
+  
+  if (!user) throw new Error('Utilisateur non trouvé');
+  
+  const lang = user.language || 'fr';
+  const template = weeklyReportTemplate[lang] || weeklyReportTemplate.fr;
+  const report = await buildUserReport(user.id, lang);
+  
+  console.log('[Communication] \ud83e\uddea Test rapport hebdo pour', user.email);
+  console.log('[Communication] Report data:', JSON.stringify(report, null, 2));
+  
+  const { subject, html } = template.generate(user.prenom, report, user.id);
+  
+  const result = await resend.emails.send({
+    from: FROM_EMAIL,
+    to: user.email,
+    subject: `[TEST] ${subject}`,
+    html
+  });
+  
+  console.log('[Communication] \u2705 Test rapport hebdo envoyé \u00e0', user.email);
+  return { sent: true, email: user.email, report, resendId: result?.id };
+}
+
 module.exports = {
   sendCalendarEventEmails,
   sendWeeklyReportEmails,
   sendAdminPreviewEmails,
+  sendTestWeeklyReport,
   unsubscribe,
   updatePreferences,
   getPreferences,

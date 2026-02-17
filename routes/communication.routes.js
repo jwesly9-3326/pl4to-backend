@@ -114,6 +114,20 @@ router.post('/trigger/weekly', async (req, res) => {
 });
 
 // ============================================
+// POST /api/communications/test/weekly
+// Envoie un rapport hebdo TEST à l'utilisateur connecté
+// ============================================
+router.post('/test/weekly', authMiddleware, async (req, res) => {
+  try {
+    const result = await communicationService.sendTestWeeklyReport(req.user.id);
+    res.json({ success: true, ...result });
+  } catch (error) {
+    console.error('[Communications] Erreur test weekly:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ============================================
 // GET /api/communications/events
 // Liste tous les événements du calendrier
 // ============================================

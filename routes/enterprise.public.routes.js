@@ -7,6 +7,23 @@ const router = express.Router();
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const prisma = require('../prisma-client');
+const emailService = require('../utils/emailService');
+
+// ============================================
+// STORE TEMPORAIRE - Codes de vérification email portail
+// En mémoire (pas en BD) — codes valides 15 min max
+// ============================================
+const verificationCodes = new Map();
+// Nettoyage automatique toutes les 15 minutes
+setInterval(() => {
+  const now = Date.now();
+  for (const [email, data] of verificationCodes) {
+    if (now > data.expires) verificationCodes.delete(email);
+  }
+}, 15 * 60 * 1000);
+
+// Rate limit en mémoire: max 3 envois par email par heure
+const sendRateLimit = new Map();
 
 // ============================================
 // POST /api/enterprise/login
@@ -179,6 +196,146 @@ router.post('/request-portal', async (req, res) => {
   } catch (error) {
     console.error('[Portal Request] ❌ Erreur:', error);
     res.status(500).json({ error: 'Erreur serveur lors de la soumission.' });
+  }
+});
+
+// ============================================
+// POST /api/enterprise/public/request-portal/send-code
+// Envoie un code de vérification à 6 chiffres par email
+// ============================================
+router.post('/request-portal/send-code', async (req, res) => {
+  try {
+    const { contactEmail, contactName } = req.body;
+
+    if (!contactEmail) {
+      return res.status(400).json({ error: 'Courriel requis.' });
+    }
+
+    const email = contactEmail.trim().toLowerCase();
+
+    // Validation format email
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return res.status(400).json({ error: 'Format de courriel invalide.' });
+    }
+
+    // Rate limit: max 3 envois par email par heure
+    const now = Date.now();
+    const rateKey = email;
+    const rateData = sendRateLimit.get(rateKey);
+    if (rateData) {
+      // Nettoyer les entrées expirées (> 1 heure)
+      rateData.timestamps = rateData.timestamps.filter(t => now - t < 3600000);
+      if (rateData.timestamps.length >= 3) {
+        return res.status(429).json({
+          error: 'Trop de demandes. Réessayez dans quelques minutes.'
+        });
+      }
+      rateData.timestamps.push(now);
+    } else {
+      sendRateLimit.set(rateKey, { timestamps: [now] });
+    }
+
+    // Générer le code 6 chiffres
+    const code = emailService.generateCode();
+
+    // Stocker dans la Map (expire dans 15 minutes)
+    verificationCodes.set(email, {
+      code,
+      expires: now + 15 * 60 * 1000,
+      attempts: 0
+    });
+
+    // Envoyer l'email via Resend
+    const prenom = (contactName || '').trim().split(' ')[0] || 'Professionnel';
+    const result = await emailService.sendVerificationCode(
+      email,
+      prenom,
+      code,
+      `🔐 Code de vérification PL4TO Pro: ${code}`,
+      'verification'
+    );
+
+    if (!result.success) {
+      console.error('[Portal Verify] ❌ Erreur envoi email:', result.error);
+      return res.status(500).json({ error: 'Erreur lors de l\'envoi du courriel.' });
+    }
+
+    console.log(`[🏢 Portal Verify] 📧 Code envoyé à ${email}`);
+
+    res.json({
+      success: true,
+      message: 'Code de vérification envoyé.'
+    });
+
+  } catch (error) {
+    console.error('[Portal Verify] ❌ Erreur:', error);
+    res.status(500).json({ error: 'Erreur serveur.' });
+  }
+});
+
+// ============================================
+// POST /api/enterprise/public/request-portal/verify-code
+// Vérifie le code à 6 chiffres saisi par l'utilisateur
+// ============================================
+router.post('/request-portal/verify-code', async (req, res) => {
+  try {
+    const { contactEmail, code } = req.body;
+
+    if (!contactEmail || !code) {
+      return res.status(400).json({ error: 'Courriel et code requis.' });
+    }
+
+    const email = contactEmail.trim().toLowerCase();
+    const stored = verificationCodes.get(email);
+
+    if (!stored) {
+      return res.status(400).json({
+        error: 'Aucun code en attente pour ce courriel. Demandez un nouveau code.',
+        expired: true
+      });
+    }
+
+    // Vérifier expiration
+    if (Date.now() > stored.expires) {
+      verificationCodes.delete(email);
+      return res.status(400).json({
+        error: 'Code expiré. Demandez un nouveau code.',
+        expired: true
+      });
+    }
+
+    // Vérifier max tentatives (5)
+    if (stored.attempts >= 5) {
+      verificationCodes.delete(email);
+      return res.status(429).json({
+        error: 'Trop de tentatives. Demandez un nouveau code.',
+        expired: true
+      });
+    }
+
+    // Vérifier le code
+    stored.attempts += 1;
+    if (stored.code !== code.trim()) {
+      return res.status(400).json({
+        error: 'Code invalide. Vérifiez et réessayez.',
+        attemptsLeft: 5 - stored.attempts
+      });
+    }
+
+    // Succès — supprimer le code
+    verificationCodes.delete(email);
+    console.log(`[🏢 Portal Verify] ✅ Email vérifié: ${email}`);
+
+    res.json({
+      success: true,
+      verified: true,
+      message: 'Courriel vérifié avec succès.'
+    });
+
+  } catch (error) {
+    console.error('[Portal Verify] ❌ Erreur:', error);
+    res.status(500).json({ error: 'Erreur serveur.' });
   }
 });
 

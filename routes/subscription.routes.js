@@ -34,7 +34,10 @@ router.get('/', requireAuth, async (req, res) => {
         subscriptionStartDate: true,
         subscriptionEndDate: true,
         unlimitedAccess: true,
-        onboardingCompleted: true
+        // onboardingCompleted est sur UserData, pas User
+        userData: {
+          select: { onboardingCompleted: true }
+        }
       }
     });
 
@@ -106,7 +109,7 @@ router.get('/', requireAuth, async (req, res) => {
         isBetaFounder: user.isBetaFounder,
         subscriptionStartDate: user.subscriptionStartDate,
         subscriptionEndDate: user.subscriptionEndDate,
-        onboardingCompleted: user.onboardingCompleted
+        onboardingCompleted: user.userData?.onboardingCompleted || false
       }
     });
 

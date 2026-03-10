@@ -91,6 +91,9 @@ model User {
   organizationMembers  OrganizationMember[]   // Organisations auxquelles ce user appartient
   managedClients       ClientProfile[]        // Clients gérés par ce conseiller
 
+  // 🤝 Référencement courtier (rabais B2B2C)
+  referralOrganizationId String?              // Si inscrit via invitation courtier → rabais
+
   @@map("users")
 }
 
@@ -435,7 +438,8 @@ model Organization {
   members         OrganizationMember[]
   clients         ClientProfile[]
   credentials     EnterpriseCredential[]
-  
+  invitations     ClientInvitation[]
+
   @@map("organizations")
   @@index([slug])
   @@index([isActive])
@@ -480,7 +484,7 @@ model OrganizationMember {
 model ClientProfile {
   id              String   @id @default(uuid())
   organizationId  String
-  advisorUserId   String                          // Le conseiller qui gère ce client
+  advisorUserId   String?                         // Optionnel — null si créé via portail enterprise
   
   // ===== INFORMATIONS CLIENT =====
   prenom          String
@@ -517,8 +521,9 @@ model ClientProfile {
   
   // Relations
   organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  advisor         User         @relation(fields: [advisorUserId], references: [id], onDelete: Cascade)
-  
+  advisor         User?        @relation(fields: [advisorUserId], references: [id], onDelete: SetNull)
+  invitations     ClientInvitation[]
+
   @@map("client_profiles")
   @@index([organizationId])
   @@index([advisorUserId])
@@ -550,6 +555,33 @@ model EnterpriseCredential {
   @@map("enterprise_credentials")
   @@index([organizationId])
   @@index([identifiant])
+}
+
+// ============================================
+// 18b. TABLE CLIENT_INVITATION - Invitations envoyées par un courtier
+// Le courtier entre un courriel → le client reçoit un lien d'inscription
+// Token UUID unique dans l'URL: pl4to.com/inscription?ref=TOKEN
+// ============================================
+model ClientInvitation {
+  id              String    @id @default(uuid())
+  organizationId  String
+  clientProfileId String
+  token           String    @unique                // UUID token dans le lien d'inscription
+  email           String                           // Courriel du client invité
+  expiresAt       DateTime                         // 30 jours après création
+  acceptedAt      DateTime?                        // Rempli quand le client crée son compte
+  acceptedUserId  String?                          // L'ID du User B2C créé
+
+  createdAt       DateTime  @default(now())
+
+  // Relations
+  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  clientProfile   ClientProfile @relation(fields: [clientProfileId], references: [id], onDelete: Cascade)
+
+  @@map("client_invitations")
+  @@index([token])
+  @@index([email])
+  @@index([organizationId])
 }
 
 // ============================================

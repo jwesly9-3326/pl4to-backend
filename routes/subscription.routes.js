@@ -33,7 +33,8 @@ router.get('/', requireAuth, async (req, res) => {
         isBetaFounder: true,
         subscriptionStartDate: true,
         subscriptionEndDate: true,
-        unlimitedAccess: true
+        unlimitedAccess: true,
+        onboardingCompleted: true
       }
     });
 
@@ -41,12 +42,12 @@ router.get('/', requireAuth, async (req, res) => {
       return res.status(404).json({ error: 'Utilisateur non trouvé' });
     }
 
-    // 🔓 Accès illimité: bypass toute vérification
+    // 🔓 Accès illimité: bypass toute vérification — donne accès Pro+IA
     if (user.unlimitedAccess) {
       return res.json({
         success: true,
         subscription: {
-          currentPlan: 'essential',
+          currentPlan: 'pro',
           trialActive: false,
           trialStartDate: null,
           trialEndDate: null,
@@ -104,7 +105,8 @@ router.get('/', requireAuth, async (req, res) => {
         planChosen: user.planChosen,
         isBetaFounder: user.isBetaFounder,
         subscriptionStartDate: user.subscriptionStartDate,
-        subscriptionEndDate: user.subscriptionEndDate
+        subscriptionEndDate: user.subscriptionEndDate,
+        onboardingCompleted: user.onboardingCompleted
       }
     });
 
@@ -115,8 +117,9 @@ router.get('/', requireAuth, async (req, res) => {
 });
 
 // ============================================
-// POST /api/subscription/start-trial - Démarrer le trial de 14 jours
+// POST /api/subscription/start-trial - Démarrer le trial
 // 🛡️ Protection anti-abus: Vérifie TrialHistory avant d'accorder
+// 🏢 Referral courtier: 21 jours | Standard: 14 jours
 // ============================================
 router.post('/start-trial', requireAuth, async (req, res) => {
   try {
@@ -128,6 +131,7 @@ router.post('/start-trial', requireAuth, async (req, res) => {
       where: { id: userId },
       select: {
         email: true,
+        referralOrganizationId: true,
         trialStartDate: true,
         trialEndDate: true,
         trialActive: true,
@@ -205,9 +209,13 @@ router.post('/start-trial', requireAuth, async (req, res) => {
       });
     }
 
-    // CAS 3: Nouvel email - Créer un trial de 14 jours
+    // CAS 3: Nouvel email - Créer un trial
+    // 🏢 Utilisateurs référés par un courtier/cabinet: 21 jours
+    // 👤 Utilisateurs standard: 14 jours
+    const isReferral = !!user.referralOrganizationId;
+    const trialDays = isReferral ? 21 : 14;
     const endDate = new Date(now);
-    endDate.setDate(endDate.getDate() + 14); // +14 jours
+    endDate.setDate(endDate.getDate() + trialDays);
 
     // Récupérer l'IP si disponible (pour tracking supplémentaire)
     const ipAddress = req.headers['x-forwarded-for']?.split(',')[0] || 
@@ -238,18 +246,18 @@ router.post('/start-trial', requireAuth, async (req, res) => {
       })
     ]);
 
-    console.log(`[🎉 Trial] Nouveau trial 14 jours pour ${normalizedEmail}, fin: ${endDate.toISOString().split('T')[0]}`);
+    console.log(`[🎉 Trial] Nouveau trial ${trialDays} jours${isReferral ? ' (référé courtier)' : ''} pour ${normalizedEmail}, fin: ${endDate.toISOString().split('T')[0]}`);
     console.log(`[📝 TrialHistory] Enregistré pour ${normalizedEmail}`);
 
     res.json({
       success: true,
-      message: 'Trial de 14 jours activé!',
+      message: `Trial de ${trialDays} jours activé!`,
       subscription: {
         currentPlan: 'essential',
         trialActive: true,
         trialStartDate: now,
         trialEndDate: endDate,
-        trialDaysRemaining: 14,
+        trialDaysRemaining: trialDays,
         planChosen: false
       }
     });

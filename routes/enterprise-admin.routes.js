@@ -6,6 +6,7 @@ const express = require('express');
 const router = express.Router();
 const bcrypt = require('bcrypt');
 const prisma = require('../prisma-client');
+const emailService = require('../utils/emailService');
 
 // ============================================
 // MIDDLEWARE: Vérifier que l'utilisateur est admin PL4TO
@@ -155,9 +156,22 @@ router.post('/approve-request/:requestId', async (req, res) => {
     });
     
     console.log(`[🏢 Admin] ✅ Demande approuvée: ${request.cabinetName} → ${identifiant}`);
-    
-    // TODO: Envoyer email avec identifiants au cabinet
-    
+
+    // 📧 Envoyer email avec identifiants au cabinet
+    try {
+      await emailService.sendEnterpriseCredentials(
+        request.contactEmail,
+        request.contactName,
+        request.cabinetName,
+        identifiant,
+        password
+      );
+      console.log(`[🏢 Admin] 📧 Email envoyé à ${request.contactEmail}`);
+    } catch (emailErr) {
+      console.error('[🏢 Admin] ⚠️ Email non envoyé:', emailErr.message);
+      // On ne bloque pas l'approbation si l'email échoue
+    }
+
     res.json({
       success: true,
       organization: {

@@ -21,10 +21,15 @@ const trialEmailRoutes = require('./routes/trialEmail.routes');
 const enterpriseRoutes = require('./routes/enterprise.routes');
 const enterprisePublicRoutes = require('./routes/enterprise.public.routes');
 const enterpriseAdminRoutes = require('./routes/enterprise-admin.routes');
+const enterprisePortalRoutes = require('./routes/enterprise.portal.routes');
 const communicationRoutes = require('./routes/communication.routes');
+const aiCoachRoutes = require('./routes/ai-coach.routes');
+const cryptoRoutes = require('./routes/crypto.routes');
 
 console.log('🏢 Enterprise routes chargées');
 console.log('📧 Communication routes chargées');
+console.log('🤖 AI Coach routes chargées');
+console.log('🪙 Crypto routes chargées');
 
 console.log('🔗 Zoho CRM routes chargées');
 console.log('📧 Trial Email routes chargées');
@@ -105,6 +110,15 @@ const forgotPasswordLimiter = rateLimit({
   windowMs: 60 * 60 * 1000, // 1 heure
   max: 3,
   message: { error: 'Trop de demandes. Réessayez dans 1 heure.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+// Limite pour le coach IA: 10 par heure
+const aiCoachLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 heure
+  max: 10,
+  message: { error: 'Trop de demandes d\'analyse. Réessayez dans 1 heure.' },
   standardHeaders: true,
   legacyHeaders: false,
 });
@@ -220,6 +234,11 @@ app.use('/api/enterprise/public', enterprisePublicRoutes);
 app.use('/api/enterprise', authenticateToken, enterpriseRoutes);
 
 // ============================================
+// 🏢 ROUTES PORTAIL ENTERPRISE (JWT Enterprise — courtier/firme)
+// ============================================
+app.use('/api/enterprise/portal', enterprisePortalRoutes);
+
+// ============================================
 // 🏢 ROUTES ADMIN ENTERPRISE (Gestion portails)
 // ============================================
 app.use('/api/admin/enterprise', authenticateToken, enterpriseAdminRoutes);
@@ -278,6 +297,16 @@ app.post('/api/waitlist', async (req, res) => {
 // ROUTES ADMIN / OPTIMIZATION REQUESTS
 // ============================================
 app.use('/api/optimization-requests', authenticateToken, adminRoutes);
+
+// ============================================
+// ROUTES AI COACH (Recommandations IA - Pro uniquement)
+// ============================================
+app.use('/api/ai-coach', aiCoachLimiter, authenticateToken, aiCoachRoutes);
+
+// ============================================
+// ROUTES CRYPTO (Solde par adresse publique)
+// ============================================
+app.use('/api/crypto', cryptoRoutes);
 
 // ============================================
 // ROUTES SUBSCRIPTION (Trial, Plans)
@@ -1746,7 +1775,7 @@ app.post('/api/generer-gps-financier-complet', (req, res) => {
 // Register (Inscription) - 🛡️ Rate limit: 3/heure
 app.post('/api/auth/register', registerLimiter, async (req, res) => {
   try {
-    const { nom, prenom, email, password } = req.body;
+    const { nom, prenom, email, password, ref } = req.body;
 
     // Validation
     if (!nom || !prenom || !email || !password) {
@@ -1877,6 +1906,52 @@ app.post('/api/auth/register', registerLimiter, async (req, res) => {
 
     console.log(`[📧 Auth] Nouvel utilisateur créé: ${normalizedEmail}, code: ${verificationCode}`);
     console.log(`[📧 Auth] Trial: ${trialActive ? 'Actif' : 'En attente onboarding'}, fin: ${trialEndDate ? trialEndDate.toISOString().split('T')[0] : 'Après onboarding'}`);
+
+    // ============================================
+    // 🤝 RÉFÉRENCEMENT COURTIER — Lier au client invité
+    // Si l'inscription contient un token ref (invitation courtier)
+    // ============================================
+    if (ref) {
+      try {
+        const invitation = await prisma.clientInvitation.findUnique({
+          where: { token: ref },
+          include: { clientProfile: true, organization: true }
+        });
+
+        if (invitation && !invitation.acceptedAt && invitation.expiresAt > new Date()) {
+          // Lier l'invitation au nouveau User
+          await prisma.clientInvitation.update({
+            where: { id: invitation.id },
+            data: { acceptedAt: new Date(), acceptedUserId: user.id }
+          });
+
+          // Mettre à jour le ClientProfile → statut actif + lien B2C
+          await prisma.clientProfile.update({
+            where: { id: invitation.clientProfileId },
+            data: {
+              b2cUserId: user.id,
+              status: 'active',
+              invitedToB2C: true,
+              prenom: user.prenom,
+              nom: user.nom
+            }
+          });
+
+          // Marquer l'utilisateur pour le rabais courtier
+          await prisma.user.update({
+            where: { id: user.id },
+            data: { referralOrganizationId: invitation.organizationId }
+          });
+
+          console.log(`[🤝 Referral] Client ${normalizedEmail} lié à ${invitation.organization.name}`);
+        } else {
+          console.log(`[🤝 Referral] Token ref invalide ou expiré pour ${normalizedEmail}`);
+        }
+      } catch (refError) {
+        // Ne pas bloquer l'inscription si le referral échoue
+        console.error('[🤝 Referral] Erreur:', refError.message);
+      }
+    }
 
     // 📧 Envoyer le code par email
     const emailResult = await emailService.sendVerificationCode(email, prenom, verificationCode);

@@ -497,7 +497,7 @@ function generateHighlights(current, previous, lang) {
     highlights.push({
       type: nvChange > 0 ? 'positive' : 'negative',
       icon: nvChange > 0 ? '📈' : '📉',
-      text: lang === 'fr'
+      message: lang === 'fr'
         ? `Valeur nette: ${formatDelta(nvChange, lang)} vs la semaine dernière`
         : `Net worth: ${formatDelta(nvChange, lang)} vs last week`
     });
@@ -510,7 +510,7 @@ function generateHighlights(current, previous, lang) {
       highlights.push({
         type: 'achievement',
         icon: '🎯',
-        text: lang === 'fr'
+        message: lang === 'fr'
           ? `Objectif "${g.nom}" atteint!`
           : `Goal "${g.nom}" reached!`
       });
@@ -529,7 +529,7 @@ function generateHighlights(current, previous, lang) {
       highlights.push({
         type: 'positive',
         icon: '💰',
-        text: lang === 'fr'
+        message: lang === 'fr'
           ? `${best.nom}: ${formatDelta(best.change, lang)}`
           : `${best.nom}: ${formatDelta(best.change, lang)}`
       });
@@ -541,7 +541,7 @@ function generateHighlights(current, previous, lang) {
     highlights.push({
       type: current.budget.status === 'balanced' ? 'positive' : 'warning',
       icon: current.budget.status === 'balanced' ? '✅' : '⚖️',
-      text: lang === 'fr'
+      message: lang === 'fr'
         ? (current.budget.status === 'balanced'
             ? 'Budget maintenant équilibré!'
             : 'Budget déséquilibré — un ajustement serait bénéfique')

@@ -2929,6 +2929,55 @@ app.post('/api/auth/reset-password', async (req, res) => {
 });
 
 // ============================================
+// 🔑 CHANGER MOT DE PASSE (utilisateur connecté)
+// ============================================
+app.post('/api/auth/change-password', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { currentPassword, newPassword } = req.body;
+
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({ error: 'Mot de passe actuel et nouveau mot de passe requis' });
+    }
+
+    if (newPassword.length < 6) {
+      return res.status(400).json({ error: 'Le nouveau mot de passe doit contenir au moins 6 caractères' });
+    }
+
+    // Récupérer l'utilisateur
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { password: true, email: true }
+    });
+
+    if (!user) {
+      return res.status(404).json({ error: 'Utilisateur non trouvé' });
+    }
+
+    // Vérifier le mot de passe actuel
+    const isValid = await bcrypt.compare(currentPassword, user.password);
+    if (!isValid) {
+      return res.status(401).json({ error: 'Mot de passe actuel incorrect' });
+    }
+
+    // Hasher et sauvegarder le nouveau mot de passe
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    await prisma.user.update({
+      where: { id: userId },
+      data: { password: hashedPassword }
+    });
+
+    console.log(`[🔑 Change Password] Mot de passe changé pour: ${user.email}`);
+
+    res.json({ success: true, message: 'Mot de passe changé avec succès' });
+
+  } catch (error) {
+    console.error('Erreur change-password:', error);
+    res.status(500).json({ error: `Erreur serveur: ${error.message}` });
+  }
+});
+
+// ============================================
 // 🔐 AUTHENTIFICATION À DEUX FACTEURS (2FA)
 // ============================================
 // 🔐 OTPLIB - Import pour 2FA (v12)

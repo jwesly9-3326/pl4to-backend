@@ -7,6 +7,8 @@ const prisma = require('../../prisma-client');
 const calendarEventTemplate = require('./templates/communication/calendarEvent');
 const weeklyReportTemplate = require('./templates/communication/weeklyReport');
 
+const { buildFinancialSnapshot, buildComparativeInsights, getWeekStartDate } = require('./snapshotBuilder');
+
 const resend = new Resend(process.env.RESEND_API_KEY);
 const FROM_EMAIL = process.env.FROM_EMAIL || 'PL4TO <contact@pl4to.com>';
 
@@ -351,7 +353,7 @@ async function sendCalendarEventEmails() {
 // ============================================
 async function sendWeeklyReportEmails() {
   console.log('[Communication] 📊 Début envoi résumés hebdomadaires...');
-  
+
   const users = await prisma.user.findMany({
     where: {
       weeklyReportEnabled: true,
@@ -367,12 +369,12 @@ async function sendWeeklyReportEmails() {
       subscriptionPlan: true
     }
   });
-  
+
   console.log(`[Communication] ${users.length} utilisateurs opt-in pour résumé hebdo`);
-  
+
   let sent = 0;
   let errors = 0;
-  
+
   for (const user of users) {
     try {
       // Vérifier si déjà envoyé cette semaine
@@ -380,28 +382,86 @@ async function sendWeeklyReportEmails() {
         const daysSinceLast = (Date.now() - new Date(user.lastWeeklyReportAt).getTime()) / (1000 * 60 * 60 * 24);
         if (daysSinceLast < 6) continue; // Minimum 6 jours entre les envois
       }
-      
+
       const lang = user.language || 'fr';
       const template = weeklyReportTemplate[lang] || weeklyReportTemplate.fr;
-      
-      // Construire le rapport de l'utilisateur
-      const report = await buildUserReport(user.id, lang);
-      
+
+      // 📸 NOUVEAU: Construire le snapshot financier
+      let snapshot = null;
+      let comparativeInsights = null;
+
+      try {
+        snapshot = await buildFinancialSnapshot(user.id);
+
+        if (snapshot) {
+          // Chercher le snapshot précédent pour comparaison
+          const previousSnapshot = await prisma.weeklyReportSnapshot.findFirst({
+            where: { userId: user.id },
+            orderBy: { snapshotDate: 'desc' },
+            select: { financialSnapshot: true }
+          });
+
+          if (previousSnapshot?.financialSnapshot) {
+            const prevData = typeof previousSnapshot.financialSnapshot === 'string'
+              ? JSON.parse(previousSnapshot.financialSnapshot)
+              : previousSnapshot.financialSnapshot;
+            comparativeInsights = buildComparativeInsights(snapshot, prevData, lang);
+          }
+
+          console.log(`[Communication] 📸 Snapshot construit pour ${user.email} (comparison: ${comparativeInsights ? 'oui' : 'non'})`);
+        }
+      } catch (snapshotErr) {
+        console.error(`[Communication] ⚠️ Snapshot error for ${user.email}, proceeding without:`, snapshotErr.message);
+      }
+
+      // Construire le rapport enrichi
+      const report = await buildUserReport(user.id, lang, { snapshot, comparativeInsights });
+
       const { subject, html } = template.generate(user.prenom, report, user.id);
-      
+
       const result = await resend.emails.send({
         from: FROM_EMAIL,
         to: user.email,
         subject,
         html
       });
-      
+
+      // 📸 NOUVEAU: Sauvegarder le snapshot après envoi réussi
+      if (snapshot) {
+        try {
+          const weekStart = getWeekStartDate();
+          await prisma.weeklyReportSnapshot.upsert({
+            where: {
+              userId_weekStart: { userId: user.id, weekStart }
+            },
+            update: {
+              financialSnapshot: snapshot,
+              reportData: report,
+              comparativeInsights: comparativeInsights,
+              emailResendId: result?.id || null,
+              snapshotDate: new Date()
+            },
+            create: {
+              userId: user.id,
+              weekStart,
+              financialSnapshot: snapshot,
+              reportData: report,
+              comparativeInsights: comparativeInsights,
+              emailResendId: result?.id || null
+            }
+          });
+          console.log(`[Communication] 📸 Snapshot saved for ${user.email} (week ${weekStart})`);
+        } catch (saveErr) {
+          console.error(`[Communication] ⚠️ Snapshot save error for ${user.email}:`, saveErr.message);
+        }
+      }
+
       // Mettre à jour la date du dernier envoi
       await prisma.user.update({
         where: { id: user.id },
         data: { lastWeeklyReportAt: new Date() }
       });
-      
+
       // Logger
       await prisma.communicationEmail.create({
         data: {
@@ -410,16 +470,16 @@ async function sendWeeklyReportEmails() {
           resendId: result?.id || null
         }
       });
-      
+
       sent++;
       console.log(`[Communication] ✅ Résumé hebdo envoyé à ${user.email}`);
-      
+
     } catch (err) {
       errors++;
       console.error(`[Communication] ❌ Erreur résumé pour ${user.email}:`, err.message);
     }
   }
-  
+
   console.log(`[Communication] 📊 Résultat: ${sent} résumés envoyés, ${errors} erreurs`);
   return { sent, errors };
 }
@@ -427,32 +487,38 @@ async function sendWeeklyReportEmails() {
 // ============================================
 // CONSTRUIRE LE RAPPORT UTILISATEUR
 // ============================================
-async function buildUserReport(userId, lang = 'fr') {
+async function buildUserReport(userId, lang = 'fr', options = {}) {
+  const { snapshot = null, comparativeInsights = null } = options;
+
   // Récupérer les données utilisateur
   const userData = await prisma.userData.findUnique({
     where: { userId }
   });
-  
+
   const report = {
     weekStart: getWeekStart(lang),
     budgetStatus: null,
     objectifs: [],
-    nextEvent: getNextEvent(lang)
+    nextEvent: getNextEvent(lang),
+    // 📸 NOUVEAU: Champs comparatifs
+    highlights: [],
+    comparisons: null,
+    alertesCount: 0
   };
-  
+
   if (!userData) return report;
-  
+
   try {
     // Lire les champs JSON séparés de UserData (Prisma)
     const budgetPlanning = typeof userData.budgetPlanning === 'string' ? JSON.parse(userData.budgetPlanning) : userData.budgetPlanning;
     const financialGoals = typeof userData.financialGoals === 'string' ? JSON.parse(userData.financialGoals) : userData.financialGoals;
     const accounts = typeof userData.accounts === 'string' ? JSON.parse(userData.accounts) : userData.accounts;
     const initialBalances = typeof userData.initialBalances === 'string' ? JSON.parse(userData.initialBalances) : userData.initialBalances;
-    
+
     // Budget - répartition par compte (même logique que Budget.jsx slide 2)
     const budgetEntrees = budgetPlanning?.entrees || [];
     const budgetSorties = budgetPlanning?.sorties || [];
-    
+
     const calcMensuel = (montant, frequence) => {
       const m = parseFloat(montant) || 0;
       if (frequence === '1-fois') return 0;
@@ -465,7 +531,7 @@ async function buildUserReport(userId, lang = 'fr') {
         default: return m;
       }
     };
-    
+
     if (budgetEntrees.length > 0 || budgetSorties.length > 0) {
       // Grouper par compte
       const map = {};
@@ -480,59 +546,92 @@ async function buildUserReport(userId, lang = 'fr') {
       };
       addToMap(budgetEntrees, 'entrees');
       addToMap(budgetSorties, 'sorties');
-      
+
       // Enrichir avec type de compte
       const accsArr = accounts || [];
       Object.values(map).forEach(acc => {
         const found = accsArr.find(a => a.nom === acc.nom);
         if (found) acc.type = found.type || 'checking';
       });
-      
+
       // Vérifier si un compte est en orange (déséquilibré)
       const hasOrange = Object.values(map).some(acc => {
-        const isCredit = acc.type === 'credit';
+        const isCredit = acc.type === 'credit' || acc.type === 'hypotheque' || acc.type === 'marge';
         if (isCredit) return (acc.sorties - acc.entrees) > 0; // Dépenses > paiements
         return (acc.entrees - acc.sorties) < 0; // Sorties > entrées
       });
-      
+
       report.budgetStatus = hasOrange ? 'unbalanced' : 'balanced';
     }
-    
+
     // Objectifs - progression % seulement
     const goals = financialGoals || [];
     const accs = accounts || [];
     const soldes = initialBalances?.soldes || [];
-    
+
     goals.forEach(goal => {
       if (!goal.compteAssocie || !goal.montantCible) return;
       const soldeInfo = soldes.find(s => s.accountName === goal.compteAssocie);
       const currentBalance = parseFloat(soldeInfo?.solde) || 0;
       const targetAmount = parseFloat(goal.montantCible) || 0;
       if (targetAmount === 0) return;
-      
+
       const account = accs.find(a => a.nom === goal.compteAssocie);
-      const isCredit = account?.type === 'credit';
-      
+      const isCredit = account?.type === 'credit' || account?.type === 'hypotheque' || account?.type === 'marge';
+
       let progress;
       if (isCredit) {
         progress = currentBalance <= targetAmount ? 100 : Math.round((targetAmount / currentBalance) * 100);
       } else {
         progress = Math.min(Math.round((currentBalance / targetAmount) * 100), 100);
       }
-      
+
       report.objectifs.push({
         name: goal.nom,
         progress: Math.max(0, progress),
-        isReached: progress >= 100
+        isReached: progress >= 100,
+        progressChange: null, // enrichi ci-dessous
+        justReached: false
       });
     });
-    
-    console.log('[Communication] Report built:', { budgetStatus: report.budgetStatus, objectifsCount: report.objectifs.length });
-    
+
+    // 📸 NOUVEAU: Enrichir avec données comparatives
+    if (comparativeInsights) {
+      report.comparisons = {
+        valeurNetteChange: comparativeInsights.portefeuille.valeurNetteChange,
+        trend: comparativeInsights.portefeuille.trend
+      };
+      report.highlights = comparativeInsights.highlights || [];
+
+      // Enrichir chaque objectif avec le changement de progrès
+      if (comparativeInsights.objectifsChanges) {
+        report.objectifs = report.objectifs.map(obj => {
+          const change = comparativeInsights.objectifsChanges.find(c => c.nom === obj.name);
+          return {
+            ...obj,
+            progressChange: change && !change.isNew ? change.progressChange : null,
+            justReached: change ? change.justReached : false
+          };
+        });
+      }
+    }
+
+    // 📸 NOUVEAU: Nombre d'alertes trajectoire
+    if (snapshot?.trajectoire6mois?.alertes) {
+      report.alertesCount = snapshot.trajectoire6mois.alertes.length;
+    }
+
+    console.log('[Communication] Report built:', {
+      budgetStatus: report.budgetStatus,
+      objectifsCount: report.objectifs.length,
+      highlightsCount: report.highlights.length,
+      alertesCount: report.alertesCount
+    });
+
   } catch (err) {
     console.error(`[Communication] Erreur parsing données user ${userId}:`, err.message);
   }
-  
+
   return report;
 }
 
@@ -741,27 +840,65 @@ async function sendTestWeeklyReport(userId) {
     where: { id: userId },
     select: { id: true, prenom: true, email: true, language: true }
   });
-  
+
   if (!user) throw new Error('Utilisateur non trouvé');
-  
+
   const lang = user.language || 'fr';
   const template = weeklyReportTemplate[lang] || weeklyReportTemplate.fr;
-  const report = await buildUserReport(user.id, lang);
-  
-  console.log('[Communication] \ud83e\uddea Test rapport hebdo pour', user.email);
+
+  // 📸 Construire snapshot + comparaison (même logique que sendWeeklyReportEmails)
+  let snapshot = null;
+  let comparativeInsights = null;
+
+  try {
+    snapshot = await buildFinancialSnapshot(user.id);
+    if (snapshot) {
+      const previousSnapshot = await prisma.weeklyReportSnapshot.findFirst({
+        where: { userId: user.id },
+        orderBy: { snapshotDate: 'desc' },
+        select: { financialSnapshot: true }
+      });
+      if (previousSnapshot?.financialSnapshot) {
+        const prevData = typeof previousSnapshot.financialSnapshot === 'string'
+          ? JSON.parse(previousSnapshot.financialSnapshot)
+          : previousSnapshot.financialSnapshot;
+        comparativeInsights = buildComparativeInsights(snapshot, prevData, lang);
+      }
+    }
+  } catch (snapshotErr) {
+    console.error(`[Communication] ⚠️ Test snapshot error:`, snapshotErr.message);
+  }
+
+  const report = await buildUserReport(user.id, lang, { snapshot, comparativeInsights });
+
+  console.log('[Communication] 🧪 Test rapport hebdo pour', user.email);
   console.log('[Communication] Report data:', JSON.stringify(report, null, 2));
-  
+
   const { subject, html } = template.generate(user.prenom, report, user.id);
-  
+
   const result = await resend.emails.send({
     from: FROM_EMAIL,
     to: user.email,
     subject: `[TEST] ${subject}`,
     html
   });
-  
-  console.log('[Communication] \u2705 Test rapport hebdo envoyé \u00e0', user.email);
-  return { sent: true, email: user.email, report, resendId: result?.id };
+
+  // 📸 Sauvegarder le snapshot même pour les tests (pour les comparaisons futures)
+  if (snapshot) {
+    try {
+      const weekStart = getWeekStartDate();
+      await prisma.weeklyReportSnapshot.upsert({
+        where: { userId_weekStart: { userId: user.id, weekStart } },
+        update: { financialSnapshot: snapshot, reportData: report, comparativeInsights, emailResendId: result?.id || null, snapshotDate: new Date() },
+        create: { userId: user.id, weekStart, financialSnapshot: snapshot, reportData: report, comparativeInsights, emailResendId: result?.id || null }
+      });
+    } catch (saveErr) {
+      console.error(`[Communication] ⚠️ Test snapshot save error:`, saveErr.message);
+    }
+  }
+
+  console.log('[Communication] ✅ Test rapport hebdo envoyé à', user.email);
+  return { sent: true, email: user.email, report, snapshot: snapshot ? 'saved' : 'none', resendId: result?.id };
 }
 
 module.exports = {

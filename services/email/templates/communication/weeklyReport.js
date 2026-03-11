@@ -39,6 +39,22 @@ const weeklyReportTemplate = {
             </p>
           </div>
 
+          <!-- 📊 Highlights comparatifs (si disponibles) -->
+          ${report.highlights && report.highlights.length > 0 ? `
+          <div style="background: linear-gradient(135deg, #667eea15 0%, #764ba215 100%); border-radius: 16px; padding: 24px; margin-bottom: 15px; border: 1px solid #667eea30;">
+            <p style="color: #667eea; font-size: 13px; text-transform: uppercase; letter-spacing: 1px; margin: 0 0 14px 0; font-weight: bold;">
+              📊 Cette semaine
+            </p>
+            ${report.highlights.map(h => `
+            <div style="margin-bottom: 8px;">
+              <p style="color: #333; font-size: 14px; line-height: 1.5; margin: 0;">
+                ${h.icon} ${h.message}
+              </p>
+            </div>
+            `).join('')}
+          </div>
+          ` : ''}
+
           <!-- 📅 Calendrier - Prochain événement -->
           ${report.nextEvent ? `
           <div style="background: #f8f9fa; border-radius: 16px; padding: 24px; margin-bottom: 15px; border: 1px solid #e9ecef;">
@@ -94,26 +110,38 @@ const weeklyReportTemplate = {
             <div style="margin-bottom: 14px;">
               <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse: collapse;">
                 <tr>
-                  <td style="color: #333; font-size: 14px;">${obj.isReached ? '✅' : '📍'} ${obj.name}</td>
-                  <td style="color: ${obj.isReached ? '#22c55e' : '#667eea'}; font-size: 14px; font-weight: bold; text-align: right;">${obj.progress}%</td>
+                  <td style="color: #333; font-size: 14px;">${obj.justReached ? '🎉' : obj.isReached ? '✅' : '📍'} ${obj.name}</td>
+                  <td style="color: ${obj.isReached ? '#22c55e' : '#667eea'}; font-size: 14px; font-weight: bold; text-align: right;">
+                    ${obj.progress}%${obj.progressChange !== null && obj.progressChange !== 0 ? ` <span style="color: ${obj.progressChange > 0 ? '#22c55e' : '#ef4444'}; font-size: 12px;">(${obj.progressChange > 0 ? '↑' : '↓'} ${obj.progressChange > 0 ? '+' : ''}${obj.progressChange}%)</span>` : ''}
+                  </td>
                 </tr>
               </table>
               <div style="background: #e9ecef; border-radius: 4px; height: 6px; margin-top: 6px; overflow: hidden;">
                 <div style="background: ${obj.isReached ? '#22c55e' : '#667eea'}; height: 100%; width: ${obj.progress}%; border-radius: 4px;"></div>
               </div>
+              ${obj.justReached ? `<p style="color: #22c55e; font-size: 12px; margin: 4px 0 0 0; font-style: italic;">🎉 Objectif atteint cette semaine!</p>` : ''}
             </div>
             `).join('')}
           </div>
           ` : ''}
 
-          <!-- 🚦 Alertes - Teaser -->
-          <div style="background: #fffbeb; border-radius: 16px; padding: 24px; margin-bottom: 20px; border: 1px solid #fef3c7;">
+          <!-- 🚦 Alertes - Teaser enrichi -->
+          <div style="background: ${report.alertesCount > 0 ? '#fef2f2' : '#fffbeb'}; border-radius: 16px; padding: 24px; margin-bottom: 20px; border: 1px solid ${report.alertesCount > 0 ? '#fecaca' : '#fef3c7'};">
             <p style="color: #999; font-size: 13px; text-transform: uppercase; letter-spacing: 1px; margin: 0 0 12px 0;">
               🚦 Trajectoire financière
             </p>
-            <p style="color: #333; font-size: 15px; line-height: 1.6; margin: 0;">
-              Consulte ton GPS pour les alertes ou embouteillages sur ta trajectoire financière.
+            ${report.alertesCount > 0 ? `
+            <p style="color: #ef4444; font-size: 15px; font-weight: bold; margin: 0 0 6px 0;">
+              ⚠️ ${report.alertesCount} alerte${report.alertesCount > 1 ? 's' : ''} détectée${report.alertesCount > 1 ? 's' : ''} dans les 6 prochains mois
             </p>
+            <p style="color: #666; font-size: 14px; line-height: 1.5; margin: 0;">
+              Consulte ton GPS pour voir les détails et ajuster ta route.
+            </p>
+            ` : `
+            <p style="color: #333; font-size: 15px; line-height: 1.6; margin: 0;">
+              ✅ Aucune alerte sur ta trajectoire. Bonne route!
+            </p>
+            `}
           </div>
 
           <!-- CTA -->
@@ -189,6 +217,22 @@ const weeklyReportTemplate = {
             </p>
           </div>
 
+          <!-- 📊 Comparative highlights (if available) -->
+          ${report.highlights && report.highlights.length > 0 ? `
+          <div style="background: linear-gradient(135deg, #667eea15 0%, #764ba215 100%); border-radius: 16px; padding: 24px; margin-bottom: 15px; border: 1px solid #667eea30;">
+            <p style="color: #667eea; font-size: 13px; text-transform: uppercase; letter-spacing: 1px; margin: 0 0 14px 0; font-weight: bold;">
+              📊 This week
+            </p>
+            ${report.highlights.map(h => `
+            <div style="margin-bottom: 8px;">
+              <p style="color: #333; font-size: 14px; line-height: 1.5; margin: 0;">
+                ${h.icon} ${h.message}
+              </p>
+            </div>
+            `).join('')}
+          </div>
+          ` : ''}
+
           <!-- 📅 Calendar - Next event -->
           ${report.nextEvent ? `
           <div style="background: #f8f9fa; border-radius: 16px; padding: 24px; margin-bottom: 15px; border: 1px solid #e9ecef;">
@@ -244,26 +288,38 @@ const weeklyReportTemplate = {
             <div style="margin-bottom: 14px;">
               <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse: collapse;">
                 <tr>
-                  <td style="color: #333; font-size: 14px;">${obj.isReached ? '✅' : '📍'} ${obj.name}</td>
-                  <td style="color: ${obj.isReached ? '#22c55e' : '#667eea'}; font-size: 14px; font-weight: bold; text-align: right;">${obj.progress}%</td>
+                  <td style="color: #333; font-size: 14px;">${obj.justReached ? '🎉' : obj.isReached ? '✅' : '📍'} ${obj.name}</td>
+                  <td style="color: ${obj.isReached ? '#22c55e' : '#667eea'}; font-size: 14px; font-weight: bold; text-align: right;">
+                    ${obj.progress}%${obj.progressChange !== null && obj.progressChange !== 0 ? ` <span style="color: ${obj.progressChange > 0 ? '#22c55e' : '#ef4444'}; font-size: 12px;">(${obj.progressChange > 0 ? '↑' : '↓'} ${obj.progressChange > 0 ? '+' : ''}${obj.progressChange}%)</span>` : ''}
+                  </td>
                 </tr>
               </table>
               <div style="background: #e9ecef; border-radius: 4px; height: 6px; margin-top: 6px; overflow: hidden;">
                 <div style="background: ${obj.isReached ? '#22c55e' : '#667eea'}; height: 100%; width: ${obj.progress}%; border-radius: 4px;"></div>
               </div>
+              ${obj.justReached ? `<p style="color: #22c55e; font-size: 12px; margin: 4px 0 0 0; font-style: italic;">🎉 Goal reached this week!</p>` : ''}
             </div>
             `).join('')}
           </div>
           ` : ''}
 
-          <!-- 🚦 Alerts - Teaser -->
-          <div style="background: #fffbeb; border-radius: 16px; padding: 24px; margin-bottom: 20px; border: 1px solid #fef3c7;">
+          <!-- 🚦 Alerts - Enriched teaser -->
+          <div style="background: ${report.alertesCount > 0 ? '#fef2f2' : '#fffbeb'}; border-radius: 16px; padding: 24px; margin-bottom: 20px; border: 1px solid ${report.alertesCount > 0 ? '#fecaca' : '#fef3c7'};">
             <p style="color: #999; font-size: 13px; text-transform: uppercase; letter-spacing: 1px; margin: 0 0 12px 0;">
               🚦 Financial trajectory
             </p>
-            <p style="color: #333; font-size: 15px; line-height: 1.6; margin: 0;">
-              Check your GPS for any alerts or traffic jams on your financial trajectory.
+            ${report.alertesCount > 0 ? `
+            <p style="color: #ef4444; font-size: 15px; font-weight: bold; margin: 0 0 6px 0;">
+              ⚠️ ${report.alertesCount} alert${report.alertesCount > 1 ? 's' : ''} detected in the next 6 months
             </p>
+            <p style="color: #666; font-size: 14px; line-height: 1.5; margin: 0;">
+              Check your GPS to see the details and adjust your route.
+            </p>
+            ` : `
+            <p style="color: #333; font-size: 15px; line-height: 1.6; margin: 0;">
+              ✅ No alerts on your trajectory. Smooth sailing!
+            </p>
+            `}
           </div>
 
           <!-- CTA -->

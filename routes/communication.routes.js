@@ -6,6 +6,7 @@
 const express = require('express');
 const router = express.Router();
 const communicationService = require('../services/email/communicationEmailService');
+const prisma = require('../prisma-client');
 
 // Middleware auth (réutiliser celui existant)
 const authMiddleware = require('../middleware/auth');
@@ -146,6 +147,108 @@ router.get('/events', authMiddleware, async (req, res) => {
     
     res.json({ events, todaysEvent: todaysEvent?.id || null, nextEvent });
   } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ============================================
+// GET /api/communications/report-history
+// Liste paginée des rapports hebdo avec snapshots
+// ============================================
+router.get('/report-history', authMiddleware, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const limit = Math.min(parseInt(req.query.limit) || 10, 52);
+    const offset = parseInt(req.query.offset) || 0;
+
+    const [reports, total] = await Promise.all([
+      prisma.weeklyReportSnapshot.findMany({
+        where: { userId },
+        orderBy: { snapshotDate: 'desc' },
+        skip: offset,
+        take: limit,
+        select: {
+          id: true,
+          weekStart: true,
+          snapshotDate: true,
+          reportVersion: true,
+          createdAt: true,
+          // Summary fields from reportData (lighter than full snapshot)
+          reportData: true,
+          comparativeInsights: true
+        }
+      }),
+      prisma.weeklyReportSnapshot.count({ where: { userId } })
+    ]);
+
+    // Return lighter version for list view
+    const items = reports.map(r => {
+      const report = r.reportData || {};
+      const insights = r.comparativeInsights || {};
+      return {
+        id: r.id,
+        weekStart: r.weekStart,
+        snapshotDate: r.snapshotDate,
+        reportVersion: r.reportVersion,
+        // Summary data
+        budgetStatus: report.budgetStatus || null,
+        objectifsCount: (report.objectifs || []).length,
+        highlightsCount: (report.highlights || []).length,
+        alertesCount: report.alertesCount || 0,
+        hasComparison: !!insights.portefeuille,
+        // Quick stats from insights
+        valeurNetteChange: insights.portefeuille?.valeurNetteChange || null,
+        trend: insights.portefeuille?.trend || null
+      };
+    });
+
+    res.json({
+      items,
+      total,
+      limit,
+      offset,
+      hasMore: offset + limit < total
+    });
+  } catch (error) {
+    console.error('[Communications] Erreur report-history:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ============================================
+// GET /api/communications/report-history/:id
+// Détail d'un rapport avec snapshot complet
+// ============================================
+router.get('/report-history/:id', authMiddleware, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { id } = req.params;
+
+    const report = await prisma.weeklyReportSnapshot.findUnique({
+      where: { id }
+    });
+
+    if (!report) {
+      return res.status(404).json({ error: 'Rapport non trouvé' });
+    }
+
+    // Security: only owner can access
+    if (report.userId !== userId) {
+      return res.status(403).json({ error: 'Accès non autorisé' });
+    }
+
+    res.json({
+      id: report.id,
+      weekStart: report.weekStart,
+      snapshotDate: report.snapshotDate,
+      reportVersion: report.reportVersion,
+      createdAt: report.createdAt,
+      financialSnapshot: report.financialSnapshot,
+      reportData: report.reportData,
+      comparativeInsights: report.comparativeInsights
+    });
+  } catch (error) {
+    console.error('[Communications] Erreur report-history detail:', error);
     res.status(500).json({ error: error.message });
   }
 });

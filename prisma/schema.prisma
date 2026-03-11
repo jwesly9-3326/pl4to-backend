@@ -94,6 +94,9 @@ model User {
   // 🤝 Référencement courtier (rabais B2B2C)
   referralOrganizationId String?              // Si inscrit via invitation courtier → rabais
 
+  // 📸 Mémoire rapports hebdomadaires
+  weeklyReportSnapshots  WeeklyReportSnapshot[]
+
   @@map("users")
 }
 
@@ -635,4 +638,38 @@ model CommunicationEmail {
   @@index([emailType])
   @@index([sentAt])
   @@index([eventName])
+}
+
+// ============================================
+// WEEKLY_REPORT_SNAPSHOT - Mémoire des rapports hebdomadaires
+// Stocke un snapshot financier complet + le rapport envoyé + comparaisons
+// Permet des rapports comparatifs semaine après semaine
+// Servira de source de données pour AI Coach "Alain"
+// ============================================
+model WeeklyReportSnapshot {
+  id                  String   @id @default(uuid())
+  userId              String
+  weekStart           String                          // "2026-03-09" (lundi de la semaine)
+  snapshotDate        DateTime @default(now())        // Moment exact du snapshot
+
+  // ===== SNAPSHOT FINANCIER =====
+  financialSnapshot   Json                            // ~5-10KB: comptes, portefeuille, budget, objectifs, trajectoire 6 mois
+
+  // ===== RAPPORT ENVOYÉ =====
+  reportData          Json                            // Le rapport qui a été envoyé par email
+
+  // ===== COMPARAISONS (vs semaine précédente) =====
+  comparativeInsights Json?                           // null pour le 1er rapport, calculé ensuite
+
+  // ===== METADATA =====
+  emailResendId       String?                         // Resend ID pour tracking
+  reportVersion       Int      @default(1)            // Version du schema pour migrations futures
+
+  createdAt           DateTime @default(now())
+
+  user                User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("weekly_report_snapshots")
+  @@unique([userId, weekStart])                       // Un seul snapshot par user par semaine
+  @@index([userId, snapshotDate])
 }

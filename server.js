@@ -4343,10 +4343,11 @@ app.get('/api/user-data', authenticateToken, async (req, res) => {
         accountActivities: userData.accountActivities || {},
         budgetPlanning: userData.budgetPlanning || { entrees: [], sorties: [] },
         guideProgress: userData.guideProgress || null,
+        engagementData: userData.engagementData || null,
         onboardingCompleted: userData.onboardingCompleted || false
       }
     });
-    
+
   } catch (error) {
     console.error('[User Data] Error fetching:', error);
     res.status(500).json({ success: false, error: error.message });
@@ -4360,7 +4361,7 @@ app.get('/api/user-data', authenticateToken, async (req, res) => {
 app.post('/api/user-data', authenticateToken, async (req, res) => {
   try {
     const userId = req.user.id;
-    const { userInfo, accounts, initialBalances, financialGoals, accountActivities, budgetPlanning, guideProgress, onboardingCompleted } = req.body;
+    const { userInfo, accounts, initialBalances, financialGoals, accountActivities, budgetPlanning, guideProgress, engagementData, onboardingCompleted } = req.body;
     
     const userData = await prisma.userData.upsert({
       where: { userId },
@@ -4372,6 +4373,7 @@ app.post('/api/user-data', authenticateToken, async (req, res) => {
         accountActivities: accountActivities || undefined,
         budgetPlanning: budgetPlanning || undefined,
         guideProgress: guideProgress || undefined,
+        engagementData: engagementData || undefined,
         onboardingCompleted: onboardingCompleted !== undefined ? onboardingCompleted : undefined
       },
       create: {
@@ -4383,6 +4385,7 @@ app.post('/api/user-data', authenticateToken, async (req, res) => {
         accountActivities: accountActivities || {},
         budgetPlanning: budgetPlanning || { entrees: [], sorties: [] },
         guideProgress: guideProgress || null,
+        engagementData: engagementData || null,
         onboardingCompleted: onboardingCompleted || false
       }
     });
@@ -4400,10 +4403,11 @@ app.post('/api/user-data', authenticateToken, async (req, res) => {
         accountActivities: userData.accountActivities,
         budgetPlanning: userData.budgetPlanning,
         guideProgress: userData.guideProgress,
+        engagementData: userData.engagementData,
         onboardingCompleted: userData.onboardingCompleted
       }
     });
-    
+
   } catch (error) {
     console.error('[User Data] Error saving:', error);
     res.status(500).json({ success: false, error: error.message });
@@ -4421,7 +4425,7 @@ app.patch('/api/user-data/:section', authenticateToken, async (req, res) => {
     const { section } = req.params;
     const { data } = req.body;
     
-    const validSections = ['userInfo', 'accounts', 'initialBalances', 'financialGoals', 'accountActivities', 'budgetPlanning', 'guideProgress', 'onboardingCompleted'];
+    const validSections = ['userInfo', 'accounts', 'initialBalances', 'financialGoals', 'accountActivities', 'budgetPlanning', 'guideProgress', 'engagementData', 'onboardingCompleted'];
     
     if (!validSections.includes(section)) {
       return res.status(400).json({ 

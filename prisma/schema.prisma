@@ -314,6 +314,7 @@ model UserData {
   accountActivities Json?  // { accountName: { entrees: [], sorties: [] } }
   budgetPlanning  Json?    // { entrees: [], sorties: [] }
   guideProgress   Json?    // { dashboard: true, comptes: true, ... } - Progression du guide
+  engagementData  Json?    // { confirmationHistory: ["2026-03-10", ...], cachedScore: 75 }
   onboardingCompleted Boolean @default(false)  // Flag: onboarding terminé
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt

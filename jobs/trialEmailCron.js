@@ -3,10 +3,12 @@
 
 const { processTrialEmails } = require('../services/email/trialEmailService');
 const { processSubscriberEmails } = require('../services/email/subscriberEmailService');
-const { sendCalendarEventEmails, sendAdminPreviewEmails } = require('../services/email/communicationEmailService');
+const { sendCalendarEventEmails, sendAdminPreviewEmails, sendWeeklyReportEmails } = require('../services/email/communicationEmailService');
 
 // Track: ne pas envoyer les emails calendrier plus d'une fois par jour
 let lastCalendarSendDate = null;
+// Track: ne pas envoyer les rapports hebdo plus d'une fois par semaine
+let lastWeeklyReportDate = null;
 
 let cronInterval = null;
 
@@ -26,29 +28,35 @@ function startTrialEmailCron() {
     try {
       const trialResult = await processTrialEmails();
       console.log(`[⏰ CRON] Trial:`, trialResult);
-      
+
       const subResult = await processSubscriberEmails();
       console.log(`[⏰ CRON] Subscriber:`, subResult);
-      
+
       // 📅 Vérifier si un événement calendrier correspond à aujourd'hui
       await processCalendarEmails();
+
+      // 📊 Vérifier si c'est le moment d'envoyer les rapports hebdo
+      await processWeeklyReports();
     } catch (error) {
       console.error(`[❌ CRON] Erreur première exécution:`, error);
     }
   }, 5 * 60 * 1000); // 5 minutes
-  
+
   // Ensuite toutes les heures
   cronInterval = setInterval(async () => {
     console.log(`[⏰ CRON] Exécution programmée - ${new Date().toISOString()}`);
     try {
       const trialResult = await processTrialEmails();
       console.log(`[⏰ CRON] Trial:`, trialResult);
-      
+
       const subResult = await processSubscriberEmails();
       console.log(`[⏰ CRON] Subscriber:`, subResult);
-      
+
       // 📅 Vérifier si un événement calendrier correspond à aujourd'hui
       await processCalendarEmails();
+
+      // 📊 Vérifier si c'est le moment d'envoyer les rapports hebdo
+      await processWeeklyReports();
     } catch (error) {
       console.error(`[❌ CRON] Erreur:`, error);
     }
@@ -83,6 +91,34 @@ async function processCalendarEmails() {
     lastCalendarSendDate = today;
   } catch (error) {
     console.error(`[❌ CRON] Erreur calendrier:`, error.message);
+  }
+}
+
+/**
+ * Vérifie et envoie les rapports hebdomadaires (1 fois par semaine, le lundi entre 8h-9h ET)
+ */
+async function processWeeklyReports() {
+  const now = new Date();
+  const today = now.toISOString().split('T')[0]; // "2026-03-10"
+
+  // Déjà envoyé aujourd'hui? Skip
+  if (lastWeeklyReportDate === today) return;
+
+  // Envoyer le lundi (1 = Monday) entre 8h et 13h (heure ET / UTC-5)
+  // Le serveur tourne en UTC, donc 8h ET = 13h UTC, 13h ET = 18h UTC
+  const dayOfWeek = now.getUTCDay(); // 0=dim, 1=lun, ...
+  const hourUTC = now.getUTCHours();
+
+  if (dayOfWeek !== 1) return; // Seulement le lundi
+  if (hourUTC < 13 || hourUTC >= 18) return; // 8h-13h ET = 13h-18h UTC
+
+  try {
+    console.log(`[⏰ CRON] 📊 Envoi des rapports hebdomadaires...`);
+    const result = await sendWeeklyReportEmails();
+    console.log(`[⏰ CRON] 📊 Rapports hebdo: ${result.sent} envoyés, ${result.errors} erreurs`);
+    lastWeeklyReportDate = today;
+  } catch (error) {
+    console.error(`[❌ CRON] Erreur rapports hebdo:`, error.message);
   }
 }
 

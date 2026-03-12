@@ -4,10 +4,12 @@
 require('dotenv').config();
 const prisma = require('../prisma-client');
 
-const UNLIMITED_EMAILS = [
-  'jwesly9@gmail.com',
-  'jhon.desir@pl4to.com'
-];
+// Emails définis via variable d'environnement ou arguments CLI
+// Usage: node scripts/activate-unlimited.js email1@test.com email2@test.com
+// Ou: UNLIMITED_EMAILS=email1@test.com,email2@test.com node scripts/activate-unlimited.js
+const UNLIMITED_EMAILS = process.argv.slice(2).length > 0
+  ? process.argv.slice(2)
+  : (process.env.UNLIMITED_EMAILS || '').split(',').filter(Boolean);
 
 async function main() {
   console.log('🔓 Activation accès illimité...');

@@ -1,6 +1,5 @@
 // 🎁 Script d'activation Plan Pro + IA (14 jours) + envoi courriel
-// Usage: node scripts/activate-pro-trial.js
-// Cible: desirfafane@gmail.com
+// Usage: TARGET_EMAIL=user@example.com node scripts/activate-pro-trial.js
 
 require('dotenv').config();
 const prisma = require('../prisma-client');
@@ -9,7 +8,12 @@ const { Resend } = require('resend');
 const resend = new Resend(process.env.RESEND_API_KEY);
 const FROM_EMAIL = process.env.FROM_EMAIL || 'PL4TO <contact@pl4to.com>';
 
-const TARGET_EMAIL = 'desirfafane@gmail.com';
+const TARGET_EMAIL = process.env.TARGET_EMAIL || process.argv[2];
+if (!TARGET_EMAIL) {
+  console.error('❌ Erreur: spécifier TARGET_EMAIL en variable d\'environnement ou en argument');
+  console.error('   Usage: TARGET_EMAIL=user@example.com node scripts/activate-pro-trial.js');
+  process.exit(1);
+}
 
 // ── HTML du courriel ──
 function generateEmailHTML() {
@@ -323,7 +327,7 @@ async function main() {
     const { data, error } = await resend.emails.send({
       from: FROM_EMAIL,
       to: [TARGET_EMAIL],
-      replyTo: 'jhon.desir@pl4to.com',
+      replyTo: process.env.REPLY_TO_EMAIL || 'support@pl4to.ca',
       subject: 'PL4TO vous offre 14 jours d\'accès complet — Prenez le contrôle de vos finances',
       html: generateEmailHTML(),
       text: generatePlainText()

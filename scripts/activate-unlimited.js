@@ -33,7 +33,11 @@ async function main() {
           console.log(`   → Trouvé avec email: ${userLower.email}`);
           await prisma.user.update({
             where: { id: userLower.id },
-            data: { unlimitedAccess: true }
+            data: {
+              unlimitedAccess: true,
+              subscriptionPlan: 'pro',
+              planChosen: true
+            }
           });
           console.log(`   ✅ ${userLower.prenom} (${userLower.email}) — Accès illimité activé!`);
         } else {
@@ -42,14 +46,18 @@ async function main() {
         continue;
       }
       
-      if (user.unlimitedAccess) {
-        console.log(`✅ ${user.prenom} (${email}) — Déjà activé`);
+      if (user.unlimitedAccess && user.subscriptionPlan === 'pro') {
+        console.log(`✅ ${user.prenom} (${email}) — Déjà activé (Pro+IA)`);
         continue;
       }
-      
+
       await prisma.user.update({
         where: { id: user.id },
-        data: { unlimitedAccess: true }
+        data: {
+          unlimitedAccess: true,
+          subscriptionPlan: 'pro',
+          planChosen: true
+        }
       });
       
       console.log(`✅ ${user.prenom} (${email}) — Accès illimité activé!`);

@@ -301,6 +301,21 @@ ${s.goals.length > 0 ? s.goals.map(g => `- ${g.name} (${g.account}): target $${g
 TRENDS:
 - Net worth direction: ${s.trends.netWorthDirection}`;
 
+      // Ajouter la suggestion d'épargne si disponible
+      if (s.savingsSuggestion) {
+        if (s.savingsSuggestion.isDeficit) {
+          prompt += `\n\nSAVINGS SUGGESTION:
+- Monthly budget is in DEFICIT ($${Math.abs(s.savingsSuggestion.surplus).toLocaleString()}/month)
+- ${s.savingsSuggestion.activeGoals} active goal(s) out of ${s.savingsSuggestion.totalGoals} total
+- The user CANNOT save towards their goals without adjusting their budget first`;
+        } else {
+          prompt += `\n\nSAVINGS SUGGESTION (shown to user on their Goals page):
+- Monthly surplus: $${s.savingsSuggestion.surplus.toLocaleString()}/month
+- Suggested savings per goal: $${s.savingsSuggestion.perGoal.toLocaleString()}/month (spread across ${s.savingsSuggestion.activeGoals} active goal${s.savingsSuggestion.activeGoals > 1 ? 's' : ''})
+- Use this data to make concrete recommendations about savings allocation`;
+        }
+      }
+
       // Ajouter les préférences utilisateur si présentes
       if (prefs.primaryGoal || (prefs.untouchableExpenses && prefs.untouchableExpenses.length > 0) || prefs.timeHorizon) {
         prompt += `\n\nUSER PREFERENCES:`;
@@ -348,6 +363,21 @@ ${s.goals.length > 0 ? s.goals.map(g => `- ${g.name} (${g.account}): cible ${g.t
 
 TENDANCES:
 - Direction valeur nette: ${s.trends.netWorthDirection === 'improving' ? 'en amélioration' : s.trends.netWorthDirection === 'declining' ? 'en déclin' : 'stable'}`;
+
+    // Ajouter la suggestion d'épargne si disponible
+    if (s.savingsSuggestion) {
+      if (s.savingsSuggestion.isDeficit) {
+        prompt += `\n\nSUGGESTION D'ÉPARGNE:
+- Le budget mensuel est en DÉFICIT (${Math.abs(s.savingsSuggestion.surplus).toLocaleString()} $/mois)
+- ${s.savingsSuggestion.activeGoals} objectif(s) actif(s) sur ${s.savingsSuggestion.totalGoals} au total
+- L'utilisateur NE PEUT PAS épargner vers ses objectifs sans ajuster son budget d'abord`;
+      } else {
+        prompt += `\n\nSUGGESTION D'ÉPARGNE (affichée à l'utilisateur sur sa page Objectifs):
+- Surplus mensuel: ${s.savingsSuggestion.surplus.toLocaleString()} $/mois
+- Épargne suggérée par objectif: ${s.savingsSuggestion.perGoal.toLocaleString()} $/mois (répartie sur ${s.savingsSuggestion.activeGoals} objectif${s.savingsSuggestion.activeGoals > 1 ? 's' : ''} actif${s.savingsSuggestion.activeGoals > 1 ? 's' : ''})
+- Utilise ces données pour faire des recommandations concrètes sur l'allocation de l'épargne`;
+      }
+    }
 
     // Ajouter les préférences utilisateur si présentes
     if (prefs.primaryGoal || (prefs.untouchableExpenses && prefs.untouchableExpenses.length > 0) || prefs.timeHorizon) {

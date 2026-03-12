@@ -25,11 +25,13 @@ const enterprisePortalRoutes = require('./routes/enterprise.portal.routes');
 const communicationRoutes = require('./routes/communication.routes');
 const aiCoachRoutes = require('./routes/ai-coach.routes');
 const cryptoRoutes = require('./routes/crypto.routes');
+const notificationsRoutes = require('./routes/notifications.routes');
 
 console.log('🏢 Enterprise routes chargées');
 console.log('📧 Communication routes chargées');
 console.log('🤖 AI Coach routes chargées');
 console.log('🪙 Crypto routes chargées');
+console.log('🔔 Notifications routes chargées');
 
 console.log('🔗 Zoho CRM routes chargées');
 console.log('📧 Trial Email routes chargées');
@@ -307,6 +309,11 @@ app.use('/api/ai-coach', aiCoachLimiter, authenticateToken, aiCoachRoutes);
 // ROUTES CRYPTO (Solde par adresse publique)
 // ============================================
 app.use('/api/crypto', cryptoRoutes);
+
+// ============================================
+// ROUTES NOTIFICATIONS (Push Web)
+// ============================================
+app.use('/api/notifications', authenticateToken, notificationsRoutes);
 
 // ============================================
 // ROUTES SUBSCRIPTION (Trial, Plans)

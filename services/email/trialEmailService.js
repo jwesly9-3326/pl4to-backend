@@ -18,7 +18,7 @@ const trialEndedTemplate = require('./templates/trialEnded');
 const reactivationTemplate = require('./templates/reactivation');
 
 const resend = new Resend(process.env.RESEND_API_KEY);
-const FROM_EMAIL = process.env.FROM_EMAIL || 'PL4TO <jhon.desir@pl4to.com>';
+const FROM_EMAIL = process.env.FROM_EMAIL || 'PL4TO <noreply@pl4to.com>';
 
 // ============================================
 // CONFIGURATION DES EMAILS TRIAL

@@ -7,7 +7,7 @@ const { Resend } = require('resend');
 const resend = new Resend(process.env.RESEND_API_KEY);
 
 // Email d'expédition - Domaine pl4to.com vérifié ✅
-const FROM_EMAIL = process.env.FROM_EMAIL || 'PL4TO <jhon.desir@pl4to.com>';
+const FROM_EMAIL = process.env.FROM_EMAIL || 'PL4TO <noreply@pl4to.com>';
 
 const emailService = {
   /**
@@ -218,7 +218,7 @@ const emailService = {
     try {
       const { data, error } = await resend.emails.send({
         from: FROM_EMAIL,
-        to: ['jhon.desir@pl4to.com'],
+        to: [process.env.ADMIN_NOTIFICATION_EMAIL || 'support@pl4to.ca'],
         subject: `📥 Nouvelle inscription Waitlist Pro + IA`,
         html: `
           <!DOCTYPE html>

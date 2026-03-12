@@ -13,7 +13,7 @@ const checkinTemplate = require('./templates/subscriber/checkin');
 const oneMonthRecapTemplate = require('./templates/subscriber/oneMonthRecap');
 
 const resend = new Resend(process.env.RESEND_API_KEY);
-const FROM_EMAIL = process.env.FROM_EMAIL || 'PL4TO <jhon.desir@pl4to.com>';
+const FROM_EMAIL = process.env.FROM_EMAIL || 'PL4TO <noreply@pl4to.com>';
 
 // Chemin vers le Guide PDF
 const GUIDE_PDF_PATH = path.join(__dirname, '../../assets/Guide_Bienvenue_PL4TO.pdf');

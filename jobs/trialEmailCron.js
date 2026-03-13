@@ -4,6 +4,7 @@
 const { processTrialEmails } = require('../services/email/trialEmailService');
 const { processSubscriberEmails } = require('../services/email/subscriberEmailService');
 const { sendCalendarEventEmails, sendAdminPreviewEmails, sendWeeklyReportEmails } = require('../services/email/communicationEmailService');
+const { processEconomicData } = require('../services/economic/economicDataService');
 
 // Track: ne pas envoyer les emails calendrier plus d'une fois par jour
 let lastCalendarSendDate = null;
@@ -37,6 +38,9 @@ function startTrialEmailCron() {
 
       // 📊 Vérifier si c'est le moment d'envoyer les rapports hebdo
       await processWeeklyReports();
+
+      // 📈 Mise à jour des indicateurs économiques (toutes les 6h)
+      await processEconomicIndicators();
     } catch (error) {
       console.error(`[❌ CRON] Erreur première exécution:`, error);
     }
@@ -57,6 +61,9 @@ function startTrialEmailCron() {
 
       // 📊 Vérifier si c'est le moment d'envoyer les rapports hebdo
       await processWeeklyReports();
+
+      // 📈 Mise à jour des indicateurs économiques (toutes les 6h)
+      await processEconomicIndicators();
     } catch (error) {
       console.error(`[❌ CRON] Erreur:`, error);
     }
@@ -119,6 +126,25 @@ async function processWeeklyReports() {
     lastWeeklyReportDate = today;
   } catch (error) {
     console.error(`[❌ CRON] Erreur rapports hebdo:`, error.message);
+  }
+}
+
+/**
+ * Mise à jour des indicateurs économiques (Banque du Canada + StatCan)
+ * Le service gère lui-même l'intervalle de 6h (skip si < 6h)
+ */
+async function processEconomicIndicators() {
+  try {
+    const result = await processEconomicData();
+    if (result.skipped) {
+      // Silencieux si skip (pas de spam logs)
+    } else if (result.error) {
+      console.error(`[❌ CRON] 📈 Erreur indicateurs éco:`, result.error);
+    } else {
+      console.log(`[⏰ CRON] 📈 Indicateurs éco: ${result.updated} mis à jour, ${result.alertsGenerated} alertes`);
+    }
+  } catch (error) {
+    console.error(`[❌ CRON] Erreur indicateurs économiques:`, error.message);
   }
 }
 

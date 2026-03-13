@@ -695,3 +695,52 @@ model PushSubscription {
   @@unique([userId, endpoint])
   @@index([userId])
 }
+
+// ============================================
+// 📊 ECONOMIC INDICATORS - Cache données économiques externes
+// Sources: Banque du Canada (Valet API), Statistique Canada (WDS)
+// Rafraîchi par CRON toutes les 6h
+// ============================================
+model EconomicIndicator {
+  id              String   @id @default(uuid())
+  source          String   // "boc" (Bank of Canada), "statcan" (Statistique Canada)
+  category        String   // "interest_rate", "cpi", "fuel", "food", "exchange_rate", "transport"
+  seriesKey       String   // Identifiant API: "FXCADUSD", "V122495", "735083"
+  label_fr        String   // "Taux préférentiel"
+  label_en        String   // "Prime Rate"
+  value           Decimal  @db.Decimal(12, 4)
+  previousValue   Decimal? @db.Decimal(12, 4)   // Valeur précédente (pour calculer le changement)
+  unit            String   // "percent", "cents_per_litre", "index", "cad_per_usd"
+  changePercent   Decimal? @db.Decimal(8, 4)    // % changement vs valeur précédente
+  observationDate DateTime @db.Date             // Date de l'observation (source)
+  fetchedAt       DateTime @default(now())      // Quand on l'a récupéré
+
+  @@unique([source, seriesKey, observationDate])
+  @@index([category])
+  @@index([fetchedAt])
+  @@map("economic_indicators")
+}
+
+// ============================================
+// 🔔 ECONOMIC ALERTS - Alertes personnalisées par utilisateur
+// Générées quand un indicateur économique impacte le budget d'un user
+// ============================================
+model EconomicAlert {
+  id              String   @id @default(uuid())
+  userId          String
+  indicatorCategory String // "interest_rate", "fuel", "food", "transport"
+  budgetCategory  String   // "transport", "shelter", "food" (de classifyBudgetItem)
+  alertType       String   // "rate_increase", "price_increase", "rate_decrease", "price_decrease"
+  severity        String   // "info", "warning", "positive"
+  message_fr      String
+  message_en      String
+  impactEstimate  Decimal? @db.Decimal(12, 2)  // Impact estimé $/mois
+  isRead          Boolean  @default(false)
+  createdAt       DateTime @default(now())
+  expiresAt       DateTime                     // Expiration (30 jours)
+
+  @@index([userId, isRead])
+  @@index([userId, createdAt])
+  @@index([expiresAt])
+  @@map("economic_alerts")
+}

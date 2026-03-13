@@ -11,12 +11,20 @@ const router = express.Router();
 const webpush = require('web-push');
 const prisma = require('../prisma-client');
 
-// Configurer VAPID
-webpush.setVapidDetails(
-  process.env.VAPID_SUBJECT || 'mailto:support@pl4to.com',
-  process.env.VAPID_PUBLIC_KEY,
-  process.env.VAPID_PRIVATE_KEY
-);
+// Configurer VAPID — seulement si les clés sont définies
+const VAPID_PUBLIC = process.env.VAPID_PUBLIC_KEY;
+const VAPID_PRIVATE = process.env.VAPID_PRIVATE_KEY;
+
+if (VAPID_PUBLIC && VAPID_PRIVATE) {
+  webpush.setVapidDetails(
+    process.env.VAPID_SUBJECT || 'mailto:support@pl4to.com',
+    VAPID_PUBLIC,
+    VAPID_PRIVATE
+  );
+  console.log('🔔 Push notifications: VAPID configuré ✅');
+} else {
+  console.warn('⚠️ Push notifications: VAPID_PUBLIC_KEY ou VAPID_PRIVATE_KEY manquantes — push désactivé');
+}
 
 // ============================================
 // GET /vapid-public-key - Clé publique pour le frontend

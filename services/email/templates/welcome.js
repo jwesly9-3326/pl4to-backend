@@ -5,7 +5,7 @@ const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:3000';
 
 const welcomeTemplate = {
   fr: {
-    subject: '🎉 Bienvenue sur PL4TO — Ton GPS Financier est prêt!',
+    subject: '🎉 Bienvenue sur PL4TO — Ton PL4TO est prêt!',
     generate: (prenom, trialEndDate, daysRemaining, userId) => `
       <!DOCTYPE html>
       <html>
@@ -22,10 +22,10 @@ const welcomeTemplate = {
               PL4T<span style="color: #ff9800;">O</span>
             </h1>
             <p style="color: #666; font-size: 14px; margin-top: 5px;">
-              Ton GPS Financier
+              Le GPS pour ton portefeuille
             </p>
           </div>
-          
+
           <!-- Card principale -->
           <div style="background: white; border-radius: 16px; padding: 40px; box-shadow: 0 4px 20px rgba(0,0,0,0.1);">
             
@@ -73,7 +73,7 @@ const welcomeTemplate = {
                 </div>
                 <div style="margin-left: 15px;">
                   <p style="color: #333; font-size: 15px; margin: 0; font-weight: 600;">Ajoute tes comptes bancaires</p>
-                  <p style="color: #888; font-size: 13px; margin: 4px 0 0 0;">Chèque, épargne, carte de crédit... (Aucune donnée sensible requise)</p>
+                  <p style="color: #888; font-size: 13px; margin: 4px 0 0 0;">Chèque, épargne, crédit... avec tes taux d'intérêt pour voir leur vrai impact.</p>
                 </div>
               </div>
               
@@ -84,7 +84,7 @@ const welcomeTemplate = {
                 </div>
                 <div style="margin-left: 15px;">
                   <p style="color: #333; font-size: 15px; margin: 0; font-weight: 600;">Configure ton budget</p>
-                  <p style="color: #888; font-size: 13px; margin: 4px 0 0 0;">Revenus, dépenses, transactions...</p>
+                  <p style="color: #888; font-size: 13px; margin: 4px 0 0 0;">Revenus, dépenses — ton budget quotidien et la règle 50/30/20 se calculent automatiquement.</p>
                 </div>
               </div>
               
@@ -95,7 +95,7 @@ const welcomeTemplate = {
                 </div>
                 <div style="margin-left: 15px;">
                   <p style="color: #333; font-size: 15px; margin: 0; font-weight: 600;">Explore ta trajectoire</p>
-                  <p style="color: #888; font-size: 13px; margin: 4px 0 0 0;">Visualise ton futur portefeuille jour par jour!</p>
+                  <p style="color: #888; font-size: 13px; margin: 4px 0 0 0;">Valeur nette, alertes intelligentes, et ton portefeuille projeté jour par jour!</p>
                 </div>
               </div>
             </div>
@@ -116,7 +116,7 @@ const welcomeTemplate = {
               <a href="${BACKEND_URL}/api/trial-emails/opt-out/${userId}" style="color: #888; text-decoration: underline; margin-left: 8px;">Ne plus recevoir d'emails</a>
             </p>
             <p style="color: #999; font-size: 12px; margin: 10px 0 0 0;">
-              © ${new Date().getFullYear()} PL4TO — Ton GPS Financier
+              © ${new Date().getFullYear()} PL4TO — Le GPS pour ton portefeuille
             </p>
           </div>
         </div>
@@ -126,7 +126,7 @@ const welcomeTemplate = {
   },
 
   en: {
-    subject: '🎉 Welcome to PL4TO — Your Financial GPS is ready!',
+    subject: '🎉 Welcome to PL4TO — Your PL4TO is ready!',
     generate: (prenom, trialEndDate, daysRemaining, userId) => `
       <!DOCTYPE html>
       <html>
@@ -143,10 +143,10 @@ const welcomeTemplate = {
               PL4T<span style="color: #ff9800;">O</span>
             </h1>
             <p style="color: #666; font-size: 14px; margin-top: 5px;">
-              Your Financial GPS
+              The GPS for your wallet
             </p>
           </div>
-          
+
           <!-- Main Card -->
           <div style="background: white; border-radius: 16px; padding: 40px; box-shadow: 0 4px 20px rgba(0,0,0,0.1);">
             
@@ -194,7 +194,7 @@ const welcomeTemplate = {
                 </div>
                 <div style="margin-left: 15px;">
                   <p style="color: #333; font-size: 15px; margin: 0; font-weight: 600;">Add your bank accounts</p>
-                  <p style="color: #888; font-size: 13px; margin: 4px 0 0 0;">Checking, savings, credit card... (No sensitive data required)</p>
+                  <p style="color: #888; font-size: 13px; margin: 4px 0 0 0;">Checking, savings, credit... with your interest rates to see their real impact.</p>
                 </div>
               </div>
               
@@ -205,7 +205,7 @@ const welcomeTemplate = {
                 </div>
                 <div style="margin-left: 15px;">
                   <p style="color: #333; font-size: 15px; margin: 0; font-weight: 600;">Set up your budget</p>
-                  <p style="color: #888; font-size: 13px; margin: 4px 0 0 0;">Income, expenses, transactions...</p>
+                  <p style="color: #888; font-size: 13px; margin: 4px 0 0 0;">Income, expenses — your daily budget and 50/30/20 rule are calculated automatically.</p>
                 </div>
               </div>
               
@@ -216,7 +216,7 @@ const welcomeTemplate = {
                 </div>
                 <div style="margin-left: 15px;">
                   <p style="color: #333; font-size: 15px; margin: 0; font-weight: 600;">Explore your trajectory</p>
-                  <p style="color: #888; font-size: 13px; margin: 4px 0 0 0;">Visualize your future portfolio day by day!</p>
+                  <p style="color: #888; font-size: 13px; margin: 4px 0 0 0;">Net worth, smart alerts, and your portfolio projected day by day!</p>
                 </div>
               </div>
             </div>
@@ -237,7 +237,7 @@ const welcomeTemplate = {
               <a href="${BACKEND_URL}/api/trial-emails/opt-out/${userId}" style="color: #888; text-decoration: underline; margin-left: 8px;">Stop receiving emails</a>
             </p>
             <p style="color: #999; font-size: 12px; margin: 10px 0 0 0;">
-              © ${new Date().getFullYear()} PL4TO — Your Financial GPS
+              © ${new Date().getFullYear()} PL4TO — The GPS for your wallet
             </p>
           </div>
         </div>

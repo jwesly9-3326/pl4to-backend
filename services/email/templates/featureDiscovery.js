@@ -22,10 +22,10 @@ const featureDiscoveryTemplate = {
               PL4T<span style="color: #ff9800;">O</span>
             </h1>
             <p style="color: #666; font-size: 14px; margin-top: 5px;">
-              Ton GPS Financier
+              Le GPS pour ton portefeuille
             </p>
           </div>
-          
+
           <!-- Card principale -->
           <div style="background: white; border-radius: 16px; padding: 40px; box-shadow: 0 4px 20px rgba(0,0,0,0.1);">
             
@@ -123,7 +123,7 @@ const featureDiscoveryTemplate = {
               <a href="${BACKEND_URL}/api/trial-emails/opt-out/${userId}" style="color: #888; text-decoration: underline; margin-left: 8px;">Ne plus recevoir d'emails</a>
             </p>
             <p style="color: #999; font-size: 12px; margin: 10px 0 0 0;">
-              © ${new Date().getFullYear()} PL4TO — Ton GPS Financier
+              © ${new Date().getFullYear()} PL4TO — Le GPS pour ton portefeuille
             </p>
           </div>
         </div>
@@ -150,10 +150,10 @@ const featureDiscoveryTemplate = {
               PL4T<span style="color: #ff9800;">O</span>
             </h1>
             <p style="color: #666; font-size: 14px; margin-top: 5px;">
-              Your Financial GPS
+              The GPS for your wallet
             </p>
           </div>
-          
+
           <!-- Main Card -->
           <div style="background: white; border-radius: 16px; padding: 40px; box-shadow: 0 4px 20px rgba(0,0,0,0.1);">
             
@@ -251,7 +251,7 @@ const featureDiscoveryTemplate = {
               <a href="${BACKEND_URL}/api/trial-emails/opt-out/${userId}" style="color: #888; text-decoration: underline; margin-left: 8px;">Stop receiving emails</a>
             </p>
             <p style="color: #999; font-size: 12px; margin: 10px 0 0 0;">
-              © ${new Date().getFullYear()} PL4TO — Your Financial GPS
+              © ${new Date().getFullYear()} PL4TO — The GPS for your wallet
             </p>
           </div>
         </div>

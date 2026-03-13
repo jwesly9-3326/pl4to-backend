@@ -25,7 +25,7 @@ const weeklyReportTemplate = {
               PL4T<span style="color: #fbbf24;">O</span>
             </h1>
             <p style="color: #999; font-size: 14px; margin-top: 5px;">
-              Ton GPS Financier
+              Le GPS pour ton portefeuille
             </p>
           </div>
           
@@ -148,7 +148,7 @@ const weeklyReportTemplate = {
           <div style="text-align: center; margin-bottom: 35px;">
             <a href="${FRONTEND_URL}" style="display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #ffffff; padding: 16px 40px; border-radius: 50px; text-decoration: none; font-weight: bold; font-size: 16px; box-shadow: 0 6px 20px rgba(102, 126, 234, 0.3);">
               <!--[if mso]><i style="mso-font-width:200%;mso-text-raise:30pt">&nbsp;</i><![endif]-->
-              <span style="color: #ffffff;">Ouvrir mon GPS Financier →</span>
+              <span style="color: #ffffff;">Ouvrir mon PL4TO →</span>
               <!--[if mso]><i style="mso-font-width:200%;">&nbsp;</i><![endif]-->
             </a>
           </div>
@@ -164,14 +164,14 @@ const weeklyReportTemplate = {
           <!-- PS -->
           <div style="background: #f8f9fa; border-radius: 10px; padding: 16px; margin-bottom: 25px; text-align: center;">
             <p style="color: #999; font-size: 13px; margin: 0;">
-              PS: Tes proches pourraient aussi bénéficier d'un GPS Financier! Partage-leur pl4to.com 🧭
+              PS: Tes proches pourraient aussi bénéficier de PL4TO! Partage-leur pl4to.com 🧭
             </p>
           </div>
 
           <!-- Footer -->
           <div style="text-align: center; padding-top: 20px; border-top: 1px solid #e9ecef;">
             <p style="color: #999; font-size: 13px; margin: 0 0 8px 0;">
-              PL4T<span style="color: #fbbf24;">O</span> — Ton GPS Financier
+              PL4T<span style="color: #fbbf24;">O</span> — Le GPS pour ton portefeuille
             </p>
             <p style="color: #bbb; font-size: 12px; margin: 0;">
               <a href="${BACKEND_URL}/api/communications/unsubscribe?userId=${userId}&type=weekly" style="color: #bbb; text-decoration: underline;">Se désabonner du résumé hebdomadaire</a>
@@ -203,7 +203,7 @@ const weeklyReportTemplate = {
               PL4T<span style="color: #fbbf24;">O</span>
             </h1>
             <p style="color: #999; font-size: 14px; margin-top: 5px;">
-              Your Financial GPS
+              The GPS for your wallet
             </p>
           </div>
           
@@ -326,7 +326,7 @@ const weeklyReportTemplate = {
           <div style="text-align: center; margin-bottom: 35px;">
             <a href="${FRONTEND_URL}" style="display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #ffffff; padding: 16px 40px; border-radius: 50px; text-decoration: none; font-weight: bold; font-size: 16px; box-shadow: 0 6px 20px rgba(102, 126, 234, 0.3);">
               <!--[if mso]><i style="mso-font-width:200%;mso-text-raise:30pt">&nbsp;</i><![endif]-->
-              <span style="color: #ffffff;">Open my Financial GPS →</span>
+              <span style="color: #ffffff;">Open my PL4TO →</span>
               <!--[if mso]><i style="mso-font-width:200%;">&nbsp;</i><![endif]-->
             </a>
           </div>
@@ -342,14 +342,14 @@ const weeklyReportTemplate = {
           <!-- PS -->
           <div style="background: #f8f9fa; border-radius: 10px; padding: 16px; margin-bottom: 25px; text-align: center;">
             <p style="color: #999; font-size: 13px; margin: 0;">
-              PS: Your friends could also benefit from a Financial GPS! Share pl4to.com 🧭
+              PS: Your friends could also benefit from PL4TO! Share pl4to.com 🧭
             </p>
           </div>
 
           <!-- Footer -->
           <div style="text-align: center; padding-top: 20px; border-top: 1px solid #e9ecef;">
             <p style="color: #999; font-size: 13px; margin: 0 0 8px 0;">
-              PL4T<span style="color: #fbbf24;">O</span> — Your Financial GPS
+              PL4T<span style="color: #fbbf24;">O</span> — The GPS for your wallet
             </p>
             <p style="color: #bbb; font-size: 12px; margin: 0;">
               <a href="${BACKEND_URL}/api/communications/unsubscribe?userId=${userId}&type=weekly" style="color: #bbb; text-decoration: underline;">Unsubscribe from weekly reports</a>

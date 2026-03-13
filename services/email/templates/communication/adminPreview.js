@@ -134,7 +134,7 @@ const adminPreviewTemplate = {
               </div>
               
               <div style="text-align: center;">
-                <span style="display: inline-block; background: linear-gradient(135deg, #667eea, #764ba2); color: white; padding: 10px 24px; border-radius: 25px; font-size: 13px; font-weight: bold;">Voir mon GPS Financier →</span>
+                <span style="display: inline-block; background: linear-gradient(135deg, #667eea, #764ba2); color: white; padding: 10px 24px; border-radius: 25px; font-size: 13px; font-weight: bold;">Voir mon PL4TO →</span>
               </div>
             </div>
           </div>

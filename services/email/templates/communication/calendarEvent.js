@@ -8,7 +8,7 @@ const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:3000';
 const calendarEventTemplate = {
   fr: {
     generate: (prenom, event, nextEvent, userId) => ({
-      subject: `${event.emoji} ${event.name} — Ton GPS Financier avait prévu le coup!`,
+      subject: `${event.emoji} ${event.name} — PL4TO avait prévu le coup!`,
       html: `
       <!DOCTYPE html>
       <html>
@@ -25,7 +25,7 @@ const calendarEventTemplate = {
               PL4T<span style="color: #fbbf24;">O</span>
             </h1>
             <p style="color: rgba(255,255,255,0.6); font-size: 14px; margin-top: 5px;">
-              Ton GPS Financier
+              Le GPS pour ton portefeuille
             </p>
           </div>
           
@@ -89,14 +89,14 @@ const calendarEventTemplate = {
           <!-- CTA -->
           <div style="text-align: center; margin-bottom: 35px;">
             <a href="${FRONTEND_URL}" style="display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 16px 40px; border-radius: 50px; text-decoration: none; font-weight: bold; font-size: 16px; box-shadow: 0 6px 20px rgba(102, 126, 234, 0.3);">
-              Voir mon GPS Financier →
+              Voir mon PL4TO →
             </a>
           </div>
 
           <!-- Footer -->
           <div style="text-align: center; padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.1);">
             <p style="color: rgba(255,255,255,0.4); font-size: 13px; margin: 0 0 8px 0;">
-              PL4T<span style="color: #fbbf24;">O</span> — Ton GPS Financier
+              PL4T<span style="color: #fbbf24;">O</span> — Le GPS pour ton portefeuille
             </p>
             <p style="color: rgba(255,255,255,0.3); font-size: 12px; margin: 0;">
               <a href="${BACKEND_URL}/api/communications/unsubscribe?userId=${userId}&type=calendar" style="color: rgba(255,255,255,0.3); text-decoration: underline;">Se désabonner des emails événements</a>
@@ -111,7 +111,7 @@ const calendarEventTemplate = {
   },
   en: {
     generate: (prenom, event, nextEvent, userId) => ({
-      subject: `${event.emoji} ${event.name} — Your Financial GPS saw it coming!`,
+      subject: `${event.emoji} ${event.name} — PL4TO saw it coming!`,
       html: `
       <!DOCTYPE html>
       <html>
@@ -124,7 +124,7 @@ const calendarEventTemplate = {
           
           <div style="text-align: center; margin-bottom: 30px;">
             <h1 style="color: white; font-size: 32px; margin: 0;">PL4T<span style="color: #fbbf24;">O</span></h1>
-            <p style="color: rgba(255,255,255,0.6); font-size: 14px; margin-top: 5px;">Your Financial GPS</p>
+            <p style="color: rgba(255,255,255,0.6); font-size: 14px; margin-top: 5px;">The GPS for your wallet</p>
           </div>
           
           <div style="text-align: center; margin-bottom: 25px;">
@@ -165,11 +165,11 @@ const calendarEventTemplate = {
           </p>
 
           <div style="text-align: center; margin-bottom: 35px;">
-            <a href="${FRONTEND_URL}" style="display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 16px 40px; border-radius: 50px; text-decoration: none; font-weight: bold; font-size: 16px;">View my Financial GPS →</a>
+            <a href="${FRONTEND_URL}" style="display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 16px 40px; border-radius: 50px; text-decoration: none; font-weight: bold; font-size: 16px;">View my PL4TO →</a>
           </div>
 
           <div style="text-align: center; padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.1);">
-            <p style="color: rgba(255,255,255,0.4); font-size: 13px; margin: 0 0 8px 0;">PL4T<span style="color: #fbbf24;">O</span> — Your Financial GPS</p>
+            <p style="color: rgba(255,255,255,0.4); font-size: 13px; margin: 0 0 8px 0;">PL4T<span style="color: #fbbf24;">O</span> — The GPS for your wallet</p>
             <p style="color: rgba(255,255,255,0.3); font-size: 12px; margin: 0;"><a href="${BACKEND_URL}/api/communications/unsubscribe?userId=${userId}&type=calendar" style="color: rgba(255,255,255,0.3); text-decoration: underline;">Unsubscribe from event emails</a></p>
           </div>
         </div>

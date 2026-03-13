@@ -31,8 +31,8 @@ const CALENDAR_EVENTS = [
     color: '#ec4899',
     greeting_fr: 'Bonne Saint-Valentin!',
     greeting_en: 'Happy Valentine\'s Day!',
-    funFact_fr: 'Ton GPS Financier avait déjà planifié cette journée pour cette belle facture rose. Souper romantique, cadeaux... tout était prévu dans ton calendrier bien avant aujourd\'hui. 😏',
-    funFact_en: 'Your Financial GPS had already planned this day for that lovely pink expense. Romantic dinner, gifts... it was all in your calendar well before today. 😏'
+    funFact_fr: 'PL4TO avait déjà planifié cette journée pour cette belle facture rose. Souper romantique, cadeaux... tout était prévu dans ton calendrier bien avant aujourd\'hui. 😏',
+    funFact_en: 'PL4TO had already planned this day for that lovely pink expense. Romantic dinner, gifts... it was all in your calendar well before today. 😏'
   },
   {
     id: 'printemps',
@@ -49,8 +49,8 @@ const CALENDAR_EVENTS = [
     color: '#f97316',
     greeting_fr: 'Le printemps est arrivé!',
     greeting_en: 'Spring has arrived!',
-    funFact_fr: 'Le printemps est souvent synonyme de dépenses imprévues: entretien de la cour, nettoyage, équipements... Ton GPS Financier les avait déjà intégrées dans ta trajectoire! 🌱',
-    funFact_en: 'Spring often brings unexpected expenses: yard work, cleaning, equipment... Your Financial GPS had already factored them into your trajectory! 🌱'
+    funFact_fr: 'Le printemps est souvent synonyme de dépenses imprévues: entretien de la cour, nettoyage, équipements... PL4TO les avait déjà intégrées dans ta trajectoire! 🌱',
+    funFact_en: 'Spring often brings unexpected expenses: yard work, cleaning, equipment... PL4TO had already factored them into your trajectory! 🌱'
   },
   {
     id: 'paques',
@@ -67,8 +67,8 @@ const CALENDAR_EVENTS = [
     color: '#f59e0b',
     greeting_fr: 'Joyeuses Pâques!',
     greeting_en: 'Happy Easter!',
-    funFact_fr: 'Saviez-vous que les Canadiens dépensent en moyenne 20$ en chocolats à Pâques? Ton GPS Financier avait déjà prévu cette douce dépense! 🍫',
-    funFact_en: 'Did you know Canadians spend an average of $20 on Easter chocolate? Your Financial GPS had already planned for this sweet expense! 🍫'
+    funFact_fr: 'Saviez-vous que les Canadiens dépensent en moyenne 20$ en chocolats à Pâques? PL4TO avait déjà prévu cette douce dépense! 🍫',
+    funFact_en: 'Did you know Canadians spend an average of $20 on Easter chocolate? PL4TO had already planned for this sweet expense! 🍫'
   },
   {
     id: 'fete-nationale',
@@ -85,8 +85,8 @@ const CALENDAR_EVENTS = [
     color: '#3b82f6',
     greeting_fr: 'Bonne Saint-Jean!',
     greeting_en: 'Happy National Holiday!',
-    funFact_fr: 'L\'été est la saison où les dépenses de loisirs augmentent le plus. Ton GPS Financier avait prévu le coup pour que tu profites sans stress! ☀️',
-    funFact_en: 'Summer is when leisure spending peaks. Your Financial GPS planned ahead so you can enjoy stress-free! ☀️'
+    funFact_fr: 'L\'été est la saison où les dépenses de loisirs augmentent le plus. PL4TO avait prévu le coup pour que tu profites sans stress! ☀️',
+    funFact_en: 'Summer is when leisure spending peaks. PL4TO planned ahead so you can enjoy stress-free! ☀️'
   },
   {
     id: 'rentree',
@@ -103,8 +103,8 @@ const CALENDAR_EVENTS = [
     color: '#8b5cf6',
     greeting_fr: 'Bonne rentrée!',
     greeting_en: 'Happy Back to School!',
-    funFact_fr: 'La rentrée coûte en moyenne 400$ par enfant au Canada. Ton GPS Financier avait déjà intégré ces dépenses dans ta trajectoire depuis des mois! 🎒',
-    funFact_en: 'Back to school costs an average of $400 per child in Canada. Your Financial GPS had factored these expenses into your trajectory months ago! 🎒'
+    funFact_fr: 'La rentrée coûte en moyenne 400$ par enfant au Canada. PL4TO avait déjà intégré ces dépenses dans ta trajectoire depuis des mois! 🎒',
+    funFact_en: 'Back to school costs an average of $400 per child in Canada. PL4TO had factored these expenses into your trajectory months ago! 🎒'
   },
   {
     id: 'halloween',
@@ -121,8 +121,8 @@ const CALENDAR_EVENTS = [
     color: '#f97316',
     greeting_fr: 'Joyeuse Halloween!',
     greeting_en: 'Happy Halloween!',
-    funFact_fr: 'Halloween est devenu la 2e fête la plus dépensière après Noël en Amérique du Nord. Costumes, bonbons, décor... Ton GPS Financier avait tout prévu! 👻',
-    funFact_en: 'Halloween has become the 2nd most expensive holiday after Christmas in North America. Costumes, candy, decor... Your Financial GPS had it all planned! 👻'
+    funFact_fr: 'Halloween est devenu la 2e fête la plus dépensière après Noël en Amérique du Nord. Costumes, bonbons, décor... PL4TO avait tout prévu! 👻',
+    funFact_en: 'Halloween has become the 2nd most expensive holiday after Christmas in North America. Costumes, candy, decor... PL4TO had it all planned! 👻'
   },
   {
     id: 'noel',
@@ -139,8 +139,8 @@ const CALENDAR_EVENTS = [
     color: '#ef4444',
     greeting_fr: 'Joyeux Noël!',
     greeting_en: 'Merry Christmas!',
-    funFact_fr: 'Les Canadiens dépensent en moyenne 1 500$ pour les fêtes. Ton GPS Financier t\'avait préparé pour ce moment depuis le début de l\'année! 🎁',
-    funFact_en: 'Canadians spend an average of $1,500 on the holidays. Your Financial GPS has been preparing you for this moment since the start of the year! 🎁'
+    funFact_fr: 'Les Canadiens dépensent en moyenne 1 500$ pour les fêtes. PL4TO t\'avait préparé pour ce moment depuis le début de l\'année! 🎁',
+    funFact_en: 'Canadians spend an average of $1,500 on the holidays. PL4TO has been preparing you for this moment since the start of the year! 🎁'
   }
 ];
 
@@ -152,7 +152,7 @@ const WEEKLY_FUN_FACTS = {
     'Les personnes qui suivent un budget épargnent en moyenne 20% de plus que celles qui n\'en ont pas.',
     'Vérifier ses finances une fois par semaine réduit le stress financier de 40%.',
     'La règle du 50/30/20: 50% besoins, 30% désirs, 20% épargne. Où en es-tu?',
-    'Un café à 5$ par jour, c\'est 1 825$ par an. Ton GPS Financier le sait!',
+    'Un café à 5$ par jour, c\'est 1 825$ par an. PL4TO le sait!',
     'Les objectifs financiers écrits ont 42% plus de chances d\'être atteints.',
     'Le meilleur moment pour investir était hier. Le deuxième meilleur moment, c\'est aujourd\'hui.',
     'Saviez-vous que 47% des Canadiens vivent d\'un chèque de paie à l\'autre? PL4TO t\'aide à briser ce cycle.',
@@ -162,7 +162,7 @@ const WEEKLY_FUN_FACTS = {
     'People who follow a budget save an average of 20% more than those who don\'t.',
     'Checking your finances once a week reduces financial stress by 40%.',
     'The 50/30/20 rule: 50% needs, 30% wants, 20% savings. Where do you stand?',
-    'A $5 coffee daily adds up to $1,825 a year. Your Financial GPS knows this!',
+    'A $5 coffee daily adds up to $1,825 a year. PL4TO knows this!',
     'Written financial goals are 42% more likely to be achieved.',
     'The best time to invest was yesterday. The second best time is today.',
     'Did you know 47% of Canadians live paycheck to paycheck? PL4TO helps you break that cycle.',

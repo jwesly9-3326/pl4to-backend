@@ -1,11 +1,11 @@
 // 📧 PL4TO - Template Email Premiers Pas (Jour 2)
-// Guide "3 étapes pour maîtriser ton GPS Financier"
+// Guide "3 étapes pour maîtriser ton PL4TO"
 
 const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:3000';
 
 const firstStepsTemplate = {
   fr: {
-    subject: '🧭 3 étapes pour maîtriser ton GPS Financier',
+    subject: '🧭 3 étapes pour maîtriser ton PL4TO',
     generate: (prenom, trialEndDate, daysRemaining, userId) => `
       <!DOCTYPE html>
       <html>
@@ -22,10 +22,10 @@ const firstStepsTemplate = {
               PL4T<span style="color: #ff9800;">O</span>
             </h1>
             <p style="color: #666; font-size: 14px; margin-top: 5px;">
-              Ton GPS Financier
+              Le GPS pour ton portefeuille
             </p>
           </div>
-          
+
           <!-- Card principale -->
           <div style="background: white; border-radius: 16px; padding: 40px; box-shadow: 0 4px 20px rgba(0,0,0,0.1);">
             
@@ -104,7 +104,7 @@ const firstStepsTemplate = {
               <a href="${BACKEND_URL}/api/trial-emails/opt-out/${userId}" style="color: #888; text-decoration: underline; margin-left: 8px;">Ne plus recevoir d'emails</a>
             </p>
             <p style="color: #999; font-size: 12px; margin: 10px 0 0 0;">
-              © ${new Date().getFullYear()} PL4TO — Ton GPS Financier
+              © ${new Date().getFullYear()} PL4TO — Le GPS pour ton portefeuille
             </p>
           </div>
         </div>
@@ -114,7 +114,7 @@ const firstStepsTemplate = {
   },
 
   en: {
-    subject: '🧭 3 steps to master your Financial GPS',
+    subject: '🧭 3 steps to master your PL4TO',
     generate: (prenom, trialEndDate, daysRemaining, userId) => `
       <!DOCTYPE html>
       <html>
@@ -131,10 +131,10 @@ const firstStepsTemplate = {
               PL4T<span style="color: #ff9800;">O</span>
             </h1>
             <p style="color: #666; font-size: 14px; margin-top: 5px;">
-              Your Financial GPS
+              The GPS for your wallet
             </p>
           </div>
-          
+
           <!-- Main Card -->
           <div style="background: white; border-radius: 16px; padding: 40px; box-shadow: 0 4px 20px rgba(0,0,0,0.1);">
             
@@ -213,7 +213,7 @@ const firstStepsTemplate = {
               <a href="${BACKEND_URL}/api/trial-emails/opt-out/${userId}" style="color: #888; text-decoration: underline; margin-left: 8px;">Stop receiving emails</a>
             </p>
             <p style="color: #999; font-size: 12px; margin: 10px 0 0 0;">
-              © ${new Date().getFullYear()} PL4TO — Your Financial GPS
+              © ${new Date().getFullYear()} PL4TO — The GPS for your wallet
             </p>
           </div>
         </div>

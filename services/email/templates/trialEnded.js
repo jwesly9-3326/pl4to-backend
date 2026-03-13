@@ -22,10 +22,10 @@ const trialEndedTemplate = {
               PL4T<span style="color: #ff9800;">O</span>
             </h1>
             <p style="color: #555; font-size: 15px; margin-top: 5px;">
-              Ton GPS Financier
+              Le GPS pour ton portefeuille
             </p>
           </div>
-          
+
           <!-- Card principale -->
           <div style="background: white; border-radius: 16px; padding: 40px; box-shadow: 0 4px 20px rgba(0,0,0,0.1);">
             
@@ -53,7 +53,7 @@ const trialEndedTemplate = {
                 ✅ Ce que tu gardes avec le plan Gratuit
               </h3>
               <div style="font-size: 15px; color: #444; line-height: 1.8;">
-                <div style="margin-bottom: 8px;">✓ Vue journalière de ton GPS Financier</div>
+                <div style="margin-bottom: 8px;">✓ Vue journalière de ton PL4TO</div>
                 <div style="margin-bottom: 8px;">✓ 3 comptes dans ton portefeuille</div>
                 <div style="margin-bottom: 8px;">✓ 2 objectifs à suivre</div>
                 <div style="margin-bottom: 8px;">✓ 5 simulations par mois</div>
@@ -114,7 +114,7 @@ const trialEndedTemplate = {
               <a href="${BACKEND_URL}/api/trial-emails/opt-out/${userId}" style="color: #666; text-decoration: underline; margin-left: 8px;">Ne plus recevoir d'emails</a>
             </p>
             <p style="color: #777; font-size: 13px; margin: 10px 0 0 0;">
-              © ${new Date().getFullYear()} PL4TO — Ton GPS Financier
+              © ${new Date().getFullYear()} PL4TO — Le GPS pour ton portefeuille
             </p>
           </div>
         </div>
@@ -141,10 +141,10 @@ const trialEndedTemplate = {
               PL4T<span style="color: #ff9800;">O</span>
             </h1>
             <p style="color: #555; font-size: 15px; margin-top: 5px;">
-              Your Financial GPS
+              The GPS for your wallet
             </p>
           </div>
-          
+
           <!-- Main Card -->
           <div style="background: white; border-radius: 16px; padding: 40px; box-shadow: 0 4px 20px rgba(0,0,0,0.1);">
             
@@ -172,7 +172,7 @@ const trialEndedTemplate = {
                 ✅ What you keep with the Free plan
               </h3>
               <div style="font-size: 15px; color: #444; line-height: 1.8;">
-                <div style="margin-bottom: 8px;">✓ Daily view of your Financial GPS</div>
+                <div style="margin-bottom: 8px;">✓ Daily view of your PL4TO</div>
                 <div style="margin-bottom: 8px;">✓ 3 accounts in your wallet</div>
                 <div style="margin-bottom: 8px;">✓ 2 goals to track</div>
                 <div style="margin-bottom: 8px;">✓ 5 simulations per month</div>
@@ -233,7 +233,7 @@ const trialEndedTemplate = {
               <a href="${BACKEND_URL}/api/trial-emails/opt-out/${userId}" style="color: #666; text-decoration: underline; margin-left: 8px;">Stop receiving emails</a>
             </p>
             <p style="color: #777; font-size: 13px; margin: 10px 0 0 0;">
-              © ${new Date().getFullYear()} PL4TO — Your Financial GPS
+              © ${new Date().getFullYear()} PL4TO — The GPS for your wallet
             </p>
           </div>
         </div>

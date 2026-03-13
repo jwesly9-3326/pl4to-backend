@@ -186,6 +186,24 @@ RULES:
 - PRIORITIZE recommendations based on the user's declared primary goal
 - ADAPT recommendations to the chosen time horizon
 
+PL4TO VOCABULARY (use these terms in your recommendations):
+- ⚓ Foundation = Essential, predictable expenses (rent, insurance, utilities)
+- 🔄 Regular = Recurring important expenses with variable amounts (hydro, groceries, gas)
+- 🌊 Optional = Discretionary expenses, adjustable or eliminable (restaurants, Netflix, gym)
+- 🧭 Complete = Full view of all expenses in the financial GPS
+- ⚓ Foundations = View filtering only essential expenses
+- ⭐ Priorities = View filtering essential + regular (without "Optional")
+
+PL4TO BUDGET INTELLIGENCE (if "intelligence" section present in data):
+- Use behaviorScore (0-100) for context: ≥80 = excellent, ≥60 = good, ≥40 = improving, <40 = needs work
+- Behavior score = 80% behavior (consistency, discipline, habits) + 20% math
+- If fourWallsCovered is false, ABSOLUTE PRIORITY: ensure foundations (housing, food, utilities, transport) are covered
+- Use categoryBreakdown to suggest reductions in "Optional" category if needed
+- Use needsVsWants for the 50/30/20 rule (Needs ≤50%, Wants ≤30%, Savings ≥20%)
+- Reference alerts and strengths identified by the system in your recommendations
+- When recommending expense cuts, indicate their category (e.g., "This 🌊 Optional expense could be reduced")
+- Praise good habits reflected in the behavior score
+
 FINANCIAL HISTORY (if provided):
 - You may receive a FINANCIAL HISTORY section showing the user's week-over-week evolution
 - Use this data to identify TRENDS: is their net worth improving or declining? Are goals progressing?
@@ -231,6 +249,24 @@ RÈGLES:
 - RESPECTE les dépenses intouchables de l'utilisateur — ne recommande JAMAIS de réduire ces postes
 - PRIORISE les recommandations selon l'objectif principal déclaré par l'utilisateur
 - ADAPTE tes recommandations à l'horizon de temps choisi
+
+VOCABULAIRE PL4TO (utilise ces termes dans tes recommandations):
+- ⚓ Fondation = Dépenses essentielles et prévisibles (loyer, assurances, services publics)
+- 🔄 Courant = Dépenses régulières et importantes dont le montant varie (hydro, épicerie, essence)
+- 🌊 Au choix = Dépenses discrétionnaires, ajustables ou éliminables (restos, Netflix, gym)
+- 🧭 Complet = Vue complète de toutes les dépenses dans le GPS financier
+- ⚓ Fondations = Vue filtrant uniquement les dépenses essentielles
+- ⭐ Priorités = Vue filtrant essentielles + courantes (sans les "Au choix")
+
+INTELLIGENCE BUDGET PL4TO (si section "intelligence" présente dans les données):
+- Utilise le behaviorScore (0-100) pour contextualiser: ≥80 = excellent, ≥60 = bon, ≥40 = en progrès, <40 = à améliorer
+- Score comportemental = 80% comportement (régularité, discipline, habitudes) + 20% mathématiques
+- Si fourWallsCovered est false, PRIORITÉ ABSOLUE: s'assurer que les fondations (logement, nourriture, services, transport) sont couvertes
+- Utilise categoryBreakdown pour suggérer des réductions dans la catégorie "Au choix" si nécessaire
+- Utilise needsVsWants pour évaluer la règle 50/30/20 (Besoins ≤50%, Désirs ≤30%, Épargne ≥20%)
+- Référence les alertes et forces identifiées par le système dans tes recommandations
+- Quand tu recommandes de couper des dépenses, indique leur catégorie (ex: "Cette dépense 🌊 Au choix pourrait être réduite")
+- Félicite les bonnes habitudes reflétées dans le score comportemental
 
 HISTORIQUE FINANCIER (si disponible):
 - Tu peux recevoir une section HISTORIQUE FINANCIER montrant l'évolution semaine par semaine
@@ -316,6 +352,22 @@ TRENDS:
         }
       }
 
+      // Ajouter l'intelligence budget PL4TO si disponible
+      if (s.intelligence) {
+        const intel = s.intelligence;
+        prompt += `\n\nBUDGET INTELLIGENCE (PL4TO analysis):
+- Behavior score: ${intel.behaviorScore}/100 — Budget health: ${intel.budgetHealth}
+- Four walls covered: ${intel.fourWallsCovered ? 'Yes' : 'No'}
+- Category breakdown: ${intel.categoryBreakdown.fondation.count} ⚓ Foundation ($${intel.categoryBreakdown.fondation.totalMonthly}/mo), ${intel.categoryBreakdown.courant.count} 🔄 Regular ($${intel.categoryBreakdown.courant.totalMonthly}/mo), ${intel.categoryBreakdown.auChoix.count} 🌊 Optional ($${intel.categoryBreakdown.auChoix.totalMonthly}/mo)
+- 50/30/20 rule: Needs ${intel.needsVsWants.needs}% | Wants ${intel.needsVsWants.wants}% | Savings ${intel.needsVsWants.savings}%`;
+        if (intel.alerts.length > 0) {
+          prompt += `\n- Alerts: ${intel.alerts.join('; ')}`;
+        }
+        if (intel.strengths.length > 0) {
+          prompt += `\n- Strengths: ${intel.strengths.join('; ')}`;
+        }
+      }
+
       // Ajouter les préférences utilisateur si présentes
       if (prefs.primaryGoal || (prefs.untouchableExpenses && prefs.untouchableExpenses.length > 0) || prefs.timeHorizon) {
         prompt += `\n\nUSER PREFERENCES:`;
@@ -376,6 +428,22 @@ TENDANCES:
 - Surplus mensuel: ${s.savingsSuggestion.surplus.toLocaleString()} $/mois
 - Épargne suggérée par objectif: ${s.savingsSuggestion.perGoal.toLocaleString()} $/mois (répartie sur ${s.savingsSuggestion.activeGoals} objectif${s.savingsSuggestion.activeGoals > 1 ? 's' : ''} actif${s.savingsSuggestion.activeGoals > 1 ? 's' : ''})
 - Utilise ces données pour faire des recommandations concrètes sur l'allocation de l'épargne`;
+      }
+    }
+
+    // Ajouter l'intelligence budget PL4TO si disponible
+    if (s.intelligence) {
+      const intel = s.intelligence;
+      prompt += `\n\nINTELLIGENCE BUDGET PL4TO (analyse automatique):
+- Score comportemental: ${intel.behaviorScore}/100 — Santé budgétaire: ${intel.budgetHealth === 'excellent' ? 'Excellente' : intel.budgetHealth === 'good' ? 'Bonne' : intel.budgetHealth === 'warning' ? 'Attention requise' : 'Critique'}
+- 4 fondations couvertes: ${intel.fourWallsCovered ? 'Oui' : 'Non'}
+- Répartition: ${intel.categoryBreakdown.fondation.count} ⚓ Fondation (${intel.categoryBreakdown.fondation.totalMonthly} $/mois), ${intel.categoryBreakdown.courant.count} 🔄 Courant (${intel.categoryBreakdown.courant.totalMonthly} $/mois), ${intel.categoryBreakdown.auChoix.count} 🌊 Au choix (${intel.categoryBreakdown.auChoix.totalMonthly} $/mois)
+- Règle 50/30/20: Besoins ${intel.needsVsWants.needs}% | Désirs ${intel.needsVsWants.wants}% | Épargne ${intel.needsVsWants.savings}%`;
+      if (intel.alerts.length > 0) {
+        prompt += `\n- Alertes: ${intel.alerts.join('; ')}`;
+      }
+      if (intel.strengths.length > 0) {
+        prompt += `\n- Forces: ${intel.strengths.join('; ')}`;
       }
     }
 

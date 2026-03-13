@@ -159,7 +159,7 @@ const confirmationEssentialTemplate = {
             
             <!-- CTA Button -->
             <div style="text-align: center; margin: 30px 0 10px 0;">
-              <a href="https://pl4to.com/gps-financier" 
+              <a href="https://pl4to.com/gps" 
                  style="display: inline-block; background: linear-gradient(135deg, #27ae60 0%, #219a52 100%); color: white; text-decoration: none; padding: 16px 40px; border-radius: 12px; font-size: 17px; font-weight: bold; box-shadow: 0 4px 15px rgba(39, 174, 96, 0.4);">
                 🚀 Explorer ma trajectoire
               </a>
@@ -340,7 +340,7 @@ const confirmationEssentialTemplate = {
             
             <!-- CTA Button -->
             <div style="text-align: center; margin: 30px 0 10px 0;">
-              <a href="https://pl4to.com/gps-financier" 
+              <a href="https://pl4to.com/gps" 
                  style="display: inline-block; background: linear-gradient(135deg, #27ae60 0%, #219a52 100%); color: white; text-decoration: none; padding: 16px 40px; border-radius: 12px; font-size: 17px; font-weight: bold; box-shadow: 0 4px 15px rgba(39, 174, 96, 0.4);">
                 🚀 Explore my trajectory
               </a>

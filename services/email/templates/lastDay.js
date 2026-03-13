@@ -64,7 +64,7 @@ const lastDayTemplate = {
               </p>
               
               <div style="display: grid; gap: 10px;">
-                <a href="https://pl4to.com/gps-financier" style="text-decoration: none;">
+                <a href="https://pl4to.com/gps" style="text-decoration: none;">
                   <div style="background: white; border-radius: 8px; padding: 14px 15px; display: flex; align-items: center; cursor: pointer; transition: all 0.2s;">
                     <span style="font-size: 20px; margin-right: 12px;">🔭</span>
                     <span style="color: #333; font-size: 15px;"><strong>Voir loin</strong> — Voyage dans 1 an, 5 ans, 10 ans</span>
@@ -82,7 +82,7 @@ const lastDayTemplate = {
                     <span style="color: #333; font-size: 15px;"><strong>Simuler un achat</strong> — Vois l'impact avant de décider</span>
                   </div>
                 </a>
-                <a href="https://pl4to.com/gps-financier" style="text-decoration: none;">
+                <a href="https://pl4to.com/gps" style="text-decoration: none;">
                   <div style="background: white; border-radius: 8px; padding: 14px 15px; display: flex; align-items: center; cursor: pointer;">
                     <span style="font-size: 20px; margin-right: 12px;">📅</span>
                     <span style="color: #333; font-size: 15px;"><strong>Tester une période</strong> — 1 semaine, 1 mois, 3 mois</span>
@@ -122,7 +122,7 @@ const lastDayTemplate = {
 
             <!-- CTA Secondaire -->
             <div style="text-align: center;">
-              <a href="https://pl4to.com/gps-financier" 
+              <a href="https://pl4to.com/gps" 
                  style="color: #1565c0; font-size: 15px; text-decoration: underline;">
                 ou explorer une dernière fois →
               </a>
@@ -206,7 +206,7 @@ const lastDayTemplate = {
               </p>
               
               <div style="display: grid; gap: 10px;">
-                <a href="https://pl4to.com/gps-financier" style="text-decoration: none;">
+                <a href="https://pl4to.com/gps" style="text-decoration: none;">
                   <div style="background: white; border-radius: 8px; padding: 14px 15px; display: flex; align-items: center; cursor: pointer; transition: all 0.2s;">
                     <span style="font-size: 20px; margin-right: 12px;">🔭</span>
                     <span style="color: #333; font-size: 15px;"><strong>See far ahead</strong> — Travel 1 year, 5 years, 10 years</span>
@@ -224,7 +224,7 @@ const lastDayTemplate = {
                     <span style="color: #333; font-size: 15px;"><strong>Simulate a purchase</strong> — See the impact before deciding</span>
                   </div>
                 </a>
-                <a href="https://pl4to.com/gps-financier" style="text-decoration: none;">
+                <a href="https://pl4to.com/gps" style="text-decoration: none;">
                   <div style="background: white; border-radius: 8px; padding: 14px 15px; display: flex; align-items: center; cursor: pointer;">
                     <span style="font-size: 20px; margin-right: 12px;">📅</span>
                     <span style="color: #333; font-size: 15px;"><strong>Test a period</strong> — 1 week, 1 month, 3 months</span>
@@ -264,7 +264,7 @@ const lastDayTemplate = {
 
             <!-- Secondary CTA -->
             <div style="text-align: center;">
-              <a href="https://pl4to.com/gps-financier" 
+              <a href="https://pl4to.com/gps" 
                  style="color: #1565c0; font-size: 15px; text-decoration: underline;">
                 or explore one last time →
               </a>

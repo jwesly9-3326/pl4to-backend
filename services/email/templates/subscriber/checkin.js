@@ -94,7 +94,7 @@ const checkinTemplate = {
             
             <!-- CTA -->
             <div style="text-align: center; margin: 30px 0 20px 0;">
-              <a href="https://pl4to.com/gps-financier" 
+              <a href="https://pl4to.com/gps" 
                  style="display: inline-block; background: linear-gradient(135deg, #ff9800 0%, #f57c00 100%); color: white; text-decoration: none; padding: 16px 40px; border-radius: 12px; font-size: 17px; font-weight: bold; box-shadow: 0 4px 15px rgba(255, 152, 0, 0.4);">
                 🚀 Explorer mon outil
               </a>
@@ -214,7 +214,7 @@ const checkinTemplate = {
             
             <!-- CTA -->
             <div style="text-align: center; margin: 30px 0 20px 0;">
-              <a href="https://pl4to.com/gps-financier" 
+              <a href="https://pl4to.com/gps" 
                  style="display: inline-block; background: linear-gradient(135deg, #ff9800 0%, #f57c00 100%); color: white; text-decoration: none; padding: 16px 40px; border-radius: 12px; font-size: 17px; font-weight: bold; box-shadow: 0 4px 15px rgba(255, 152, 0, 0.4);">
                 🚀 Explore my tool
               </a>

@@ -10,6 +10,7 @@ const {
   markAlertRead,
   getEconomicSummary
 } = require('../services/economic/economicDataService');
+const { getQuebecBenchmarks } = require('../services/economic/quebecBenchmarks');
 
 // ===================================================
 // GET /api/economic/indicators
@@ -94,6 +95,21 @@ router.get('/summary', authenticateToken, async (req, res) => {
   } catch (error) {
     console.error('[❌ ECON] GET /summary:', error.message);
     res.status(500).json({ success: false, error: 'Erreur' });
+  }
+});
+
+// ===================================================
+// GET /api/economic/benchmarks
+// Retourne les benchmarks de dépenses moyennes du Québec (StatCan EDM)
+// Public — données gouvernementales, pas de JWT requis
+// ===================================================
+router.get('/benchmarks', async (req, res) => {
+  try {
+    const benchmarks = getQuebecBenchmarks();
+    res.json({ success: true, data: benchmarks });
+  } catch (error) {
+    console.error('[❌ ECON] GET /benchmarks:', error.message);
+    res.status(500).json({ success: false, error: 'Erreur lors de la récupération des benchmarks' });
   }
 });
 

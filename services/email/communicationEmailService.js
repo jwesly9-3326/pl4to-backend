@@ -702,7 +702,7 @@ async function getPreferences(userId) {
     }
   });
   
-  return user || { weeklyReportEnabled: false, weeklyReportDay: 1, calendarEmailEnabled: false };
+  return user || { weeklyReportEnabled: true, weeklyReportDay: 1, calendarEmailEnabled: false };
 }
 
 // ============================================

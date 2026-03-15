@@ -4740,6 +4740,18 @@ app.listen(port, () => {
   console.log(`🚀 Pl4to Backend écoute sur http://localhost:${port}`);
   console.log(`📊 Test: http://localhost:${port}/api/health`);
   
+  // 🔄 Migration: Activer le rapport hebdomadaire pour tous les utilisateurs existants
+  prisma.user.updateMany({
+    where: { weeklyReportEnabled: false },
+    data: { weeklyReportEnabled: true }
+  }).then(result => {
+    if (result.count > 0) {
+      console.log(`📧 Migration: ${result.count} utilisateur(s) activé(s) pour le rapport hebdomadaire`);
+    }
+  }).catch(err => {
+    console.error('❌ Migration weeklyReport:', err.message);
+  });
+
   // ⏰ Démarrer le CRON des emails trial
   startTrialEmailCron();
   console.log(`⏰ CRON emails trial démarré`);

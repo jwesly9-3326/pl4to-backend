@@ -72,7 +72,7 @@ model User {
   trialRemindersStopped  Boolean   @default(false)     // Rappels désactivés (plan choisi)
 
   // ===== COMMUNICATIONS HEBDOMADAIRES =====
-  weeklyReportEnabled    Boolean   @default(false)    // Opt-in résumé hebdomadaire
+  weeklyReportEnabled    Boolean   @default(true)     // Activé par défaut — l'utilisateur peut désactiver
   weeklyReportDay        Int       @default(1)        // Jour d'envoi: 0=Dim, 1=Lun, 2=Mar, 3=Mer, 4=Jeu, 5=Ven, 6=Sam
   calendarEmailEnabled   Boolean   @default(false)    // Opt-in emails événements calendrier
   lastWeeklyReportAt     DateTime?                     // Dernier résumé envoyé

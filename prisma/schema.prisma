@@ -516,9 +516,13 @@ model ClientProfile {
   lastProjectionAt  DateTime?                      // Dernière fois que le GPS a été consulté
   trajectoryAlerts  Json?    @default("[]")        // Alertes détectées: solde négatif, etc.
   
+  // ===== TEMPLATE DEMO =====
+  isTemplate      Boolean  @default(false)         // true = modèle de démonstration, pas un vrai client
+  templateName    String?                           // Nom du template (ex: "Famille québécoise type")
+
   // ===== STATUT =====
   status          String   @default("active")      // active, archived, invited
-  
+
   // ===== LIEN B2C (boucle acquisition) =====
   invitedToB2C    Boolean  @default(false)         // Invitation envoyée au client
   b2cUserId       String?                          // Si le client crée son propre compte PL4TO

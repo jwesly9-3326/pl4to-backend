@@ -294,9 +294,10 @@ router.get('/clients', requireOrganizationMember, async (req, res) => {
     
     const where = {
       organizationId: req.organization.id,
+      isTemplate: false, // Exclure les templates de la liste clients
       ...(status && { status }),
     };
-    
+
     // Si pas admin, voir seulement ses propres clients
     if (req.membership.role !== 'admin') {
       where.advisorUserId = req.user.id;
@@ -548,6 +549,7 @@ router.get('/dashboard', requireOrganizationMember, async (req, res) => {
     const clientWhere = {
       organizationId: orgId,
       status: 'active',
+      isTemplate: false, // Exclure les templates des stats
       ...(! isAdmin && { advisorUserId: userId })
     };
     
@@ -679,6 +681,124 @@ router.get('/check', async (req, res) => {
     });
   } catch (error) {
     console.error('[Enterprise] Erreur GET check:', error);
+    res.status(500).json({ success: false, error: 'Erreur serveur' });
+  }
+});
+
+// ============================================
+// 6. TEMPLATES - Modèles de démonstration
+// ============================================
+
+// GET /api/enterprise/templates - Liste des templates disponibles
+router.get('/templates', requireOrganizationMember, async (req, res) => {
+  try {
+    const templates = await prisma.clientProfile.findMany({
+      where: {
+        organizationId: req.organization.id,
+        isTemplate: true
+      },
+      select: {
+        id: true,
+        prenom: true,
+        nom: true,
+        templateName: true,
+        notes: true,
+        userDataSnapshot: true,
+        createdAt: true
+      },
+      orderBy: { createdAt: 'asc' }
+    });
+
+    // Ajouter un résumé pour chaque template
+    const templatesWithSummary = templates.map(tpl => {
+      const snap = tpl.userDataSnapshot;
+      let summary = null;
+      if (snap) {
+        const accounts = snap.accounts || [];
+        const balances = snap.initialBalances?.soldes || [];
+        const totalBalance = balances.reduce((sum, b) => sum + (parseFloat(b.solde) || 0), 0);
+        const entrees = snap.budgetPlanning?.entrees || [];
+        const sorties = snap.budgetPlanning?.sorties || [];
+        const goals = snap.financialGoals || [];
+
+        summary = {
+          accountCount: accounts.length,
+          totalBalance,
+          incomeItems: entrees.length,
+          expenseItems: sorties.length,
+          goalCount: goals.length,
+          situation: snap.userInfo?.situationFamiliale || 'inconnu'
+        };
+      }
+      return {
+        id: tpl.id,
+        prenom: tpl.prenom,
+        nom: tpl.nom,
+        templateName: tpl.templateName,
+        notes: tpl.notes,
+        summary,
+        createdAt: tpl.createdAt
+      };
+    });
+
+    res.json({ success: true, templates: templatesWithSummary });
+  } catch (error) {
+    console.error('[Enterprise] Erreur GET templates:', error);
+    res.status(500).json({ success: false, error: 'Erreur serveur' });
+  }
+});
+
+// POST /api/enterprise/templates/:templateId/clone - Cloner un template en nouveau client
+router.post('/templates/:templateId/clone', requireOrganizationMember, async (req, res) => {
+  try {
+    const { templateId } = req.params;
+    const { prenom, nom, email, phone, notes } = req.body;
+
+    // Trouver le template
+    const template = await prisma.clientProfile.findFirst({
+      where: {
+        id: templateId,
+        organizationId: req.organization.id,
+        isTemplate: true
+      }
+    });
+
+    if (!template) {
+      return res.status(404).json({ success: false, error: 'Template non trouvé' });
+    }
+
+    // Cloner les données financières et mettre à jour les noms dans userInfo
+    let clonedSnapshot = template.userDataSnapshot ? JSON.parse(JSON.stringify(template.userDataSnapshot)) : null;
+    if (clonedSnapshot?.userInfo && (prenom || nom)) {
+      if (prenom) clonedSnapshot.userInfo.prenom = prenom;
+      if (nom) clonedSnapshot.userInfo.nom = nom;
+    }
+    // Mettre la date de départ à aujourd'hui
+    if (clonedSnapshot?.initialBalances) {
+      clonedSnapshot.initialBalances.dateDepart = new Date().toISOString().split('T')[0];
+    }
+
+    // Créer le nouveau client (pas un template)
+    const newClient = await prisma.clientProfile.create({
+      data: {
+        organizationId: req.organization.id,
+        advisorUserId: req.user.id,
+        prenom: prenom || template.prenom,
+        nom: nom || template.nom,
+        email: email || null,
+        phone: phone || null,
+        notes: notes || `Créé à partir du modèle "${template.templateName || 'Démo'}"`,
+        userDataSnapshot: clonedSnapshot,
+        isTemplate: false,
+        status: 'active'
+      }
+    });
+
+    console.log(`[Enterprise] Template "${template.templateName}" cloné → ${newClient.prenom} ${newClient.nom} par ${req.user.email}`);
+
+    res.json({ success: true, client: newClient });
+  } catch (error) {
+    console.error('[Enterprise] Erreur POST clone template:', error);
     res.status(500).json({ success: false, error: 'Erreur serveur' });
   }
 });

@@ -529,6 +529,7 @@ router.get('/templates', async (req, res) => {
         templateName: tpl.templateName,
         notes: tpl.notes,
         summary,
+        snapshot: tpl.userDataSnapshot,
         createdAt: tpl.createdAt
       };
     });

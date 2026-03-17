@@ -150,10 +150,14 @@ router.get('/clients', async (req, res) => {
       orderBy: { createdAt: 'desc' }
     });
 
+    // Récupérer le referralCode de l'org pour affichage
+    const org = await prisma.organization.findUnique({ where: { id: orgId }, select: { referralCode: true } });
+
     res.json({
       success: true,
       clients,
-      total: clients.length
+      total: clients.length,
+      referralCode: org?.referralCode || null
     });
   } catch (error) {
     console.error('[Portal] Erreur clients:', error);
@@ -214,7 +218,23 @@ router.post('/clients/invite', async (req, res) => {
       });
     }
 
-    // 4. Créer le ClientProfile avec status 'invited'
+    // 4. Auto-générer le referralCode du cabinet s'il n'en a pas encore
+    let org = await prisma.organization.findUnique({ where: { id: orgId }, select: { referralCode: true } });
+    if (!org.referralCode) {
+      const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+      const part = () => Array.from({ length: 4 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
+      let code;
+      for (let i = 0; i < 5; i++) {
+        code = `REF-${part()}-${part()}`;
+        const exists = await prisma.organization.findUnique({ where: { referralCode: code } });
+        if (!exists) break;
+      }
+      await prisma.organization.update({ where: { id: orgId }, data: { referralCode: code } });
+      org = { referralCode: code };
+      console.log(`[🏢 Portal] 🔗 Code référence auto-généré: ${code} pour org ${orgId}`);
+    }
+
+    // 5. Créer le ClientProfile avec status 'invited'
     const clientProfile = await prisma.clientProfile.create({
       data: {
         organizationId: orgId,
@@ -257,10 +277,11 @@ router.post('/clients/invite', async (req, res) => {
       // On ne bloque pas si l'email échoue — le client est quand même créé
     }
 
-    // 7. Réponse
+    // 8. Réponse (avec referralCode pour confirmation visuelle)
     res.status(201).json({
       success: true,
       message: 'Invitation envoyée avec succès.',
+      referralCode: org.referralCode,
       client: {
         id: clientProfile.id,
         prenom: clientProfile.prenom,

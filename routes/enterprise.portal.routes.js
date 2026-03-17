@@ -34,6 +34,9 @@ router.get('/organization', async (req, res) => {
         logoUrl: true,
         brandColor: true,
         contactEmail: true,
+        phone: true,
+        address: true,
+        website: true,
         plan: true,
         maxSeats: true,
         isActive: true,
@@ -58,6 +61,59 @@ router.get('/organization', async (req, res) => {
     });
   } catch (error) {
     console.error('[Portal] Erreur organization:', error);
+    res.status(500).json({ error: 'Erreur serveur.' });
+  }
+});
+
+// ============================================
+// PUT /api/enterprise/portal/organization
+// Modifier les infos du cabinet
+// ============================================
+router.put('/organization', async (req, res) => {
+  try {
+    const orgId = req.enterprise.organizationId;
+    const { name, contactEmail, phone, address, website, brandColor } = req.body;
+
+    // Validation
+    if (name !== undefined && name.trim().length === 0) {
+      return res.status(400).json({ error: 'Le nom ne peut pas être vide.' });
+    }
+    if (contactEmail !== undefined) {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(contactEmail.trim())) {
+        return res.status(400).json({ error: 'Format de courriel invalide.' });
+      }
+    }
+    if (brandColor !== undefined) {
+      const hexRegex = /^#[0-9A-Fa-f]{6}$/;
+      if (!hexRegex.test(brandColor)) {
+        return res.status(400).json({ error: 'La couleur doit être un code hexadécimal valide (#XXXXXX).' });
+      }
+    }
+
+    // Update only provided fields
+    const updateData = {};
+    if (name !== undefined) updateData.name = name.trim();
+    if (contactEmail !== undefined) updateData.contactEmail = contactEmail.trim().toLowerCase();
+    if (phone !== undefined) updateData.phone = phone.trim() || null;
+    if (address !== undefined) updateData.address = address.trim() || null;
+    if (website !== undefined) updateData.website = website.trim() || null;
+    if (brandColor !== undefined) updateData.brandColor = brandColor;
+
+    if (Object.keys(updateData).length === 0) {
+      return res.status(400).json({ error: 'Aucune modification fournie.' });
+    }
+
+    const updatedOrg = await prisma.organization.update({
+      where: { id: orgId },
+      data: updateData,
+      select: { id: true, name: true, contactEmail: true, phone: true, address: true, website: true, brandColor: true }
+    });
+
+    console.log(`[🏢 Portal] ✏️ Organisation modifiée: ${updatedOrg.name}`);
+    res.json({ success: true, organization: updatedOrg });
+  } catch (error) {
+    console.error('[Portal] Erreur PUT organization:', error);
     res.status(500).json({ error: 'Erreur serveur.' });
   }
 });
@@ -552,7 +608,9 @@ router.get('/advisor', async (req, res) => {
   try {
     const orgId = req.enterprise.organizationId;
 
-    const [totalReferred, activeClients, invitedClients, organization] = await Promise.all([
+    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+
+    const [totalReferred, activeClients, invitedClients, recentReferred, recentActive, organization] = await Promise.all([
       prisma.clientProfile.count({
         where: { organizationId: orgId, isTemplate: false, status: { not: 'archived' } }
       }),
@@ -561,6 +619,12 @@ router.get('/advisor', async (req, res) => {
       }),
       prisma.clientProfile.count({
         where: { organizationId: orgId, isTemplate: false, status: 'invited' }
+      }),
+      prisma.clientProfile.count({
+        where: { organizationId: orgId, isTemplate: false, status: { not: 'archived' }, createdAt: { gte: thirtyDaysAgo } }
+      }),
+      prisma.clientProfile.count({
+        where: { organizationId: orgId, isTemplate: false, status: 'active', updatedAt: { gte: thirtyDaysAgo } }
       }),
       prisma.organization.findUnique({
         where: { id: orgId },
@@ -574,7 +638,7 @@ router.get('/advisor', async (req, res) => {
       referralLink: organization.referralCode
         ? `https://pl4to.com/register?ref=${organization.referralCode}`
         : null,
-      stats: { totalReferred, activeClients, invitedClients }
+      stats: { totalReferred, activeClients, invitedClients, recentReferred, recentActive }
     });
   } catch (error) {
     console.error('[Portal] Erreur advisor:', error);

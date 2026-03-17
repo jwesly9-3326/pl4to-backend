@@ -70,20 +70,21 @@ router.get('/dashboard', async (req, res) => {
   try {
     const orgId = req.enterprise.organizationId;
 
-    // Compter les clients en parallèle
+    // Compter les clients en parallèle (exclure les templates)
     const [totalClients, activeClients, invitedClients, recentClients] = await Promise.all([
       prisma.clientProfile.count({
-        where: { organizationId: orgId, status: { not: 'archived' } }
+        where: { organizationId: orgId, isTemplate: false, status: { not: 'archived' } }
       }),
       prisma.clientProfile.count({
-        where: { organizationId: orgId, status: 'active' }
+        where: { organizationId: orgId, isTemplate: false, status: 'active' }
       }),
       prisma.clientProfile.count({
-        where: { organizationId: orgId, status: 'invited' }
+        where: { organizationId: orgId, isTemplate: false, status: 'invited' }
       }),
       prisma.clientProfile.count({
         where: {
           organizationId: orgId,
+          isTemplate: false,
           status: { not: 'archived' },
           createdAt: { gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) }
         }
@@ -114,8 +115,8 @@ router.get('/clients', async (req, res) => {
     const orgId = req.enterprise.organizationId;
     const { search, status } = req.query;
 
-    // Construire le filtre
-    const where = { organizationId: orgId };
+    // Construire le filtre (exclure les templates)
+    const where = { organizationId: orgId, isTemplate: false };
 
     if (status && status !== 'all') {
       where.status = status;
@@ -396,6 +397,129 @@ router.post('/change-password', async (req, res) => {
   } catch (error) {
     console.error('[Portal] Erreur change-password:', error.message, error.stack);
     res.status(500).json({ error: `Erreur serveur: ${error.message}` });
+  }
+});
+
+// ============================================
+// GET /api/enterprise/portal/templates
+// Liste des templates de démonstration
+// ============================================
+router.get('/templates', async (req, res) => {
+  try {
+    const orgId = req.enterprise.organizationId;
+
+    const templates = await prisma.clientProfile.findMany({
+      where: {
+        organizationId: orgId,
+        isTemplate: true
+      },
+      select: {
+        id: true,
+        prenom: true,
+        nom: true,
+        templateName: true,
+        notes: true,
+        userDataSnapshot: true,
+        createdAt: true
+      },
+      orderBy: { createdAt: 'asc' }
+    });
+
+    const templatesWithSummary = templates.map(tpl => {
+      const snap = tpl.userDataSnapshot;
+      let summary = null;
+      if (snap) {
+        const accounts = snap.accounts || [];
+        const balances = snap.initialBalances?.soldes || [];
+        const totalBalance = balances.reduce((sum, b) => sum + (parseFloat(b.solde) || 0), 0);
+        const entrees = snap.budgetPlanning?.entrees || [];
+        const sorties = snap.budgetPlanning?.sorties || [];
+        const goals = snap.financialGoals || [];
+
+        summary = {
+          accountCount: accounts.length,
+          totalBalance,
+          incomeItems: entrees.length,
+          expenseItems: sorties.length,
+          goalCount: goals.length,
+          situation: snap.userInfo?.situationFamiliale || 'inconnu'
+        };
+      }
+      return {
+        id: tpl.id,
+        prenom: tpl.prenom,
+        nom: tpl.nom,
+        templateName: tpl.templateName,
+        notes: tpl.notes,
+        summary,
+        createdAt: tpl.createdAt
+      };
+    });
+
+    res.json({ success: true, templates: templatesWithSummary });
+  } catch (error) {
+    console.error('[Portal] Erreur GET templates:', error);
+    res.status(500).json({ error: 'Erreur serveur.' });
+  }
+});
+
+// ============================================
+// POST /api/enterprise/portal/templates/:templateId/clone
+// Cloner un template en nouveau client
+// ============================================
+router.post('/templates/:templateId/clone', async (req, res) => {
+  try {
+    const orgId = req.enterprise.organizationId;
+    const { templateId } = req.params;
+    const { prenom, nom } = req.body;
+
+    const template = await prisma.clientProfile.findFirst({
+      where: { id: templateId, organizationId: orgId, isTemplate: true }
+    });
+
+    if (!template) {
+      return res.status(404).json({ error: 'Template non trouvé.' });
+    }
+
+    // Cloner le snapshot avec noms mis à jour
+    let clonedSnapshot = template.userDataSnapshot
+      ? JSON.parse(JSON.stringify(template.userDataSnapshot))
+      : null;
+    if (clonedSnapshot?.userInfo) {
+      if (prenom) clonedSnapshot.userInfo.prenom = prenom;
+      if (nom) clonedSnapshot.userInfo.nom = nom;
+    }
+    if (clonedSnapshot?.initialBalances) {
+      clonedSnapshot.initialBalances.dateDepart = new Date().toISOString().split('T')[0];
+    }
+
+    const newClient = await prisma.clientProfile.create({
+      data: {
+        organizationId: orgId,
+        prenom: prenom || template.prenom,
+        nom: nom || template.nom,
+        notes: `Créé à partir du modèle "${template.templateName || 'Démo'}"`,
+        userDataSnapshot: clonedSnapshot,
+        isTemplate: false,
+        status: 'active'
+      }
+    });
+
+    console.log(`[🏢 Portal] Template "${template.templateName}" cloné → ${newClient.prenom} ${newClient.nom}`);
+
+    res.json({
+      success: true,
+      client: {
+        id: newClient.id,
+        prenom: newClient.prenom,
+        nom: newClient.nom,
+        status: newClient.status,
+        createdAt: newClient.createdAt
+      }
+    });
+  } catch (error) {
+    console.error('[Portal] Erreur clone template:', error);
+    res.status(500).json({ error: 'Erreur serveur.' });
   }
 });
 

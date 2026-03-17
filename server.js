@@ -1,5 +1,6 @@
 const path = require('path');
 const dotenv = require('dotenv');
+// v2.1 - demo/login endpoint added
 
 // ⚠️ IMPORTANT: Charger .env EN PREMIER avant tout import
 dotenv.config({ path: path.resolve(__dirname, '.env') });

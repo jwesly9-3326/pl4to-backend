@@ -428,7 +428,8 @@ model Organization {
   phone           String?                       // Téléphone
   address         String?                       // Adresse
   website         String?                       // Site web du cabinet
-  
+  referralCode    String?  @unique              // Code référence unique (REF-XXXX-XXXX)
+
   // ===== ABONNEMENT ENTERPRISE =====
   plan                 String    @default("enterprise")  // enterprise (seul plan B2B pour l'instant)
   maxSeats             Int       @default(5)              // Nombre max de conseillers

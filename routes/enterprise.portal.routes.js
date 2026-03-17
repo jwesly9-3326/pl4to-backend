@@ -523,4 +523,99 @@ router.post('/templates/:templateId/clone', async (req, res) => {
   }
 });
 
+// ============================================
+// GET /api/enterprise/portal/advisor
+// Stats et données pour la page Conseiller
+// ============================================
+router.get('/advisor', async (req, res) => {
+  try {
+    const orgId = req.enterprise.organizationId;
+
+    const [totalReferred, activeClients, invitedClients, organization] = await Promise.all([
+      prisma.clientProfile.count({
+        where: { organizationId: orgId, isTemplate: false, status: { not: 'archived' } }
+      }),
+      prisma.clientProfile.count({
+        where: { organizationId: orgId, isTemplate: false, status: 'active' }
+      }),
+      prisma.clientProfile.count({
+        where: { organizationId: orgId, isTemplate: false, status: 'invited' }
+      }),
+      prisma.organization.findUnique({
+        where: { id: orgId },
+        select: { referralCode: true, name: true }
+      })
+    ]);
+
+    res.json({
+      success: true,
+      referralCode: organization.referralCode || null,
+      referralLink: organization.referralCode
+        ? `https://pl4to.com/register?ref=${organization.referralCode}`
+        : null,
+      stats: { totalReferred, activeClients, invitedClients }
+    });
+  } catch (error) {
+    console.error('[Portal] Erreur advisor:', error);
+    res.status(500).json({ error: 'Erreur serveur.' });
+  }
+});
+
+// ============================================
+// POST /api/enterprise/portal/advisor/generate-code
+// Générer un code de référence unique pour l'organisation
+// ============================================
+router.post('/advisor/generate-code', async (req, res) => {
+  try {
+    const orgId = req.enterprise.organizationId;
+
+    // Vérifier si un code existe déjà
+    const org = await prisma.organization.findUnique({
+      where: { id: orgId },
+      select: { referralCode: true }
+    });
+
+    if (org.referralCode) {
+      return res.json({
+        success: true,
+        referralCode: org.referralCode,
+        referralLink: `https://pl4to.com/register?ref=${org.referralCode}`
+      });
+    }
+
+    // Générer code unique: REF-XXXX-XXXX (sans I/O/0/1 pour lisibilité)
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    const part = () => Array.from({ length: 4 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
+
+    let referralCode;
+    let attempts = 0;
+    while (attempts < 10) {
+      referralCode = `REF-${part()}-${part()}`;
+      const existing = await prisma.organization.findFirst({ where: { referralCode } });
+      if (!existing) break;
+      attempts++;
+    }
+
+    if (attempts >= 10) {
+      return res.status(500).json({ error: 'Impossible de générer un code unique.' });
+    }
+
+    await prisma.organization.update({
+      where: { id: orgId },
+      data: { referralCode }
+    });
+
+    console.log(`[🏢 Portal] Code référence généré: ${referralCode} pour org ${orgId}`);
+
+    res.json({
+      success: true,
+      referralCode,
+      referralLink: `https://pl4to.com/register?ref=${referralCode}`
+    });
+  } catch (error) {
+    console.error('[Portal] Erreur generate-code:', error);
+    res.status(500).json({ error: 'Erreur serveur.' });
+  }
+});
+
 module.exports = router;

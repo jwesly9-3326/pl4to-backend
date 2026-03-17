@@ -704,4 +704,104 @@ router.post('/advisor/generate-code', async (req, res) => {
   }
 });
 
+// ============================================
+// POST /demo/login
+// Crée/trouve un utilisateur démo B2C pour cette org,
+// génère un JWT B2C standard → le conseiller peut voir
+// l'interface complète PL4TO dans un nouvel onglet.
+// ============================================
+router.post('/demo/login', async (req, res) => {
+  try {
+    const orgId = req.enterprise.organizationId;
+    const orgName = req.enterprise.organization.name;
+    const DEMO_SNAPSHOT = require('../data/demoSnapshot');
+    const bcrypt = require('bcrypt');
+    const crypto = require('crypto');
+    const jwt = require('jsonwebtoken');
+
+    // 1. Email déterministe par organisation
+    const demoEmail = `demo-${orgId}@pl4to.demo`;
+
+    // 2. Find or create le User démo
+    let demoUser = await prisma.user.findUnique({ where: { email: demoEmail } });
+
+    if (!demoUser) {
+      const randomPassword = crypto.randomBytes(32).toString('hex');
+      const hashedPassword = await bcrypt.hash(randomPassword, 10);
+
+      demoUser = await prisma.user.create({
+        data: {
+          email: demoEmail,
+          prenom: 'Marc-Antoine',
+          nom: 'Bergeron',
+          password: hashedPassword,
+          emailVerified: true,
+          unlimitedAccess: true,
+          subscriptionPlan: 'essential',
+          trialActive: false,
+          planChosen: true
+        }
+      });
+      console.log(`[Demo] Utilisateur démo créé pour org "${orgName}": ${demoUser.id}`);
+    }
+
+    // 3. Find or create UserData avec données démo (reset à chaque appel)
+    const demoData = {
+      userInfo: DEMO_SNAPSHOT.userInfo,
+      accounts: DEMO_SNAPSHOT.accounts,
+      initialBalances: {
+        ...DEMO_SNAPSHOT.initialBalances,
+        dateDepart: new Date().toISOString().split('T')[0]
+      },
+      financialGoals: DEMO_SNAPSHOT.financialGoals,
+      budgetPlanning: DEMO_SNAPSHOT.budgetPlanning,
+      accountActivities: {},
+      guideProgress: {
+        dashboard: true, comptes: true, budget: true,
+        objectifs: true, gps: true, calculatrice: true,
+        gestion: true, parametres: true
+      },
+      engagementData: null,
+      onboardingCompleted: true
+    };
+
+    const existingData = await prisma.userData.findUnique({ where: { userId: demoUser.id } });
+    if (existingData) {
+      await prisma.userData.update({ where: { userId: demoUser.id }, data: demoData });
+    } else {
+      await prisma.userData.create({ data: { userId: demoUser.id, ...demoData } });
+    }
+
+    // 4. Générer JWT B2C standard (même structure que POST /api/auth/login)
+    const token = jwt.sign(
+      { userId: demoUser.id, email: demoUser.email },
+      process.env.JWT_SECRET || 'gps_financier_secret_key_super_secure_2024',
+      { expiresIn: '24h' }
+    );
+
+    // 5. Retourner le payload d'auth B2C
+    res.json({
+      success: true,
+      token,
+      user: {
+        id: demoUser.id,
+        email: demoUser.email,
+        firstName: demoUser.prenom,
+        lastName: demoUser.nom,
+        isAdmin: false,
+        profilePicture: null,
+        subscriptionPlan: demoUser.subscriptionPlan,
+        trialActive: false,
+        trialEndDate: null,
+        onboardingCompleted: true,
+        guideCompleted: true
+      }
+    });
+
+  } catch (error) {
+    console.error('[Portal] Erreur demo/login:', error);
+    res.status(500).json({ error: 'Erreur serveur.' });
+  }
+});
+
 module.exports = router;

@@ -45,6 +45,12 @@ model User {
   
   language        String   @default("fr")   // Langue préférée (fr, en)
   emailOptOut     Boolean  @default(false)  // Ne plus recevoir d'emails trial
+
+  // 🌍 RÉGIONALISATION
+  country         String   @default("CA")              // Code pays ISO 3166-1 (CA, US, FR, ...)
+  region          String   @default("QC")              // Code province/état (QC, ON, BC, NY, ...)
+  currency        String   @default("CAD")             // Devise (CAD, USD, EUR, ...)
+  timezone        String   @default("America/Toronto") // Fuseau horaire IANA
   
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt

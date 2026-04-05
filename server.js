@@ -28,6 +28,7 @@ const aiCoachRoutes = require('./routes/ai-coach.routes');
 const cryptoRoutes = require('./routes/crypto.routes');
 const notificationsRoutes = require('./routes/notifications.routes');
 const economicRoutes = require('./routes/economic.routes');
+const { router: regionsRoutes } = require('./routes/regions.routes');
 
 console.log('🏢 Enterprise routes chargées');
 console.log('📧 Communication routes chargées');
@@ -322,6 +323,9 @@ app.use('/api/notifications', authenticateToken, notificationsRoutes);
 // ROUTES INTELLIGENCE ÉCONOMIQUE
 // ============================================
 app.use('/api/economic', economicRoutes);
+
+// 🌍 Régions supportées (pays + provinces)
+app.use('/api/regions', regionsRoutes);
 
 // ============================================
 // ROUTES SUBSCRIPTION (Trial, Plans)
@@ -2486,7 +2490,11 @@ app.post('/api/auth/login', loginLimiter, async (req, res) => {
         trialActive: user.trialActive,
         trialEndDate: user.trialEndDate,
         onboardingCompleted: user.onboardingCompleted,
-        guideCompleted: user.guideCompleted
+        guideCompleted: user.guideCompleted,
+        country: user.country,
+        region: user.region,
+        currency: user.currency,
+        timezone: user.timezone
       }
     });
 
@@ -2508,21 +2516,25 @@ app.post('/api/auth/logout', (req, res) => {
 // 👤 Mise à jour du profil
 app.put('/api/auth/profile', authenticateToken, async (req, res) => {
   try {
-    const { firstName, lastName } = req.body;
+    const { firstName, lastName, country, region, currency, timezone } = req.body;
     const userId = req.user.id;
-    
+
     // Valider les données
-    if (!firstName && !lastName) {
+    if (!firstName && !lastName && !country && !region && !currency && !timezone) {
       return res.status(400).json({
-        error: 'Au moins un champ (prénom ou nom) est requis'
+        error: 'Au moins un champ est requis'
       });
     }
-    
+
     // Préparer les données à mettre à jour
     const updateData = {};
     if (firstName) updateData.prenom = firstName.trim();
     if (lastName) updateData.nom = lastName.trim();
-    
+    if (country) updateData.country = country.trim().toUpperCase();
+    if (region) updateData.region = region.trim().toUpperCase();
+    if (currency) updateData.currency = currency.trim().toUpperCase();
+    if (timezone) updateData.timezone = timezone.trim();
+
     // Mettre à jour l'utilisateur
     const updatedUser = await prisma.user.update({
       where: { id: userId },
@@ -2536,12 +2548,16 @@ app.put('/api/auth/profile', authenticateToken, async (req, res) => {
         profilePicture: true,
         subscriptionPlan: true,
         trialActive: true,
-        trialEndDate: true
+        trialEndDate: true,
+        country: true,
+        region: true,
+        currency: true,
+        timezone: true
       }
     });
-    
+
     console.log(`[✅ Profile Updated] User: ${updatedUser.email}`);
-    
+
     res.json({
       id: updatedUser.id,
       email: updatedUser.email,
@@ -2551,7 +2567,11 @@ app.put('/api/auth/profile', authenticateToken, async (req, res) => {
       profilePicture: updatedUser.profilePicture,
       subscriptionPlan: updatedUser.subscriptionPlan,
       trialActive: updatedUser.trialActive,
-      trialEndDate: updatedUser.trialEndDate
+      trialEndDate: updatedUser.trialEndDate,
+      country: updatedUser.country,
+      region: updatedUser.region,
+      currency: updatedUser.currency,
+      timezone: updatedUser.timezone
     });
     
   } catch (error) {
@@ -2578,14 +2598,18 @@ app.get('/api/auth/profile', authenticateToken, async (req, res) => {
         profilePicture: true,
         subscriptionPlan: true,
         trialActive: true,
-        trialEndDate: true
+        trialEndDate: true,
+        country: true,
+        region: true,
+        currency: true,
+        timezone: true
       }
     });
-    
+
     if (!user) {
       return res.status(404).json({ error: 'Utilisateur non trouvé' });
     }
-    
+
     res.json({
       id: user.id,
       email: user.email,
@@ -2595,7 +2619,11 @@ app.get('/api/auth/profile', authenticateToken, async (req, res) => {
       profilePicture: user.profilePicture,
       subscriptionPlan: user.subscriptionPlan,
       trialActive: user.trialActive,
-      trialEndDate: user.trialEndDate
+      trialEndDate: user.trialEndDate,
+      country: user.country,
+      region: user.region,
+      currency: user.currency,
+      timezone: user.timezone
     });
     
   } catch (error) {
@@ -2794,7 +2822,11 @@ app.post('/api/auth/google', async (req, res) => {
         trialActive: user.trialActive,
         trialEndDate: user.trialEndDate,
         onboardingCompleted: user.onboardingCompleted,
-        guideCompleted: user.guideCompleted
+        guideCompleted: user.guideCompleted,
+        country: user.country,
+        region: user.region,
+        currency: user.currency,
+        timezone: user.timezone
       },
       isNewUser
     });
@@ -3234,7 +3266,11 @@ app.post('/api/auth/2fa/validate', twoFALimiter, async (req, res) => {
         trialActive: user.trialActive,
         trialEndDate: user.trialEndDate,
         onboardingCompleted: user.onboardingCompleted,
-        guideCompleted: user.guideCompleted
+        guideCompleted: user.guideCompleted,
+        country: user.country,
+        region: user.region,
+        currency: user.currency,
+        timezone: user.timezone
       },
       backupCodeUsed,
       backupCodesRemaining: backupCodeUsed ? user.twoFactorBackupCodes.length - 1 : undefined

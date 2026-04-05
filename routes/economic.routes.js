@@ -4,6 +4,9 @@
 const express = require('express');
 const router = express.Router();
 const authenticateToken = require('../middleware/auth');
+const optionalAuth = require('../middleware/optionalAuth');
+const { PrismaClient } = require('@prisma/client');
+const prisma = new PrismaClient();
 const {
   getLatestIndicators,
   getUserAlerts,
@@ -14,16 +17,31 @@ const { getQuebecBenchmarks } = require('../services/economic/quebecBenchmarks')
 
 // ===================================================
 // GET /api/economic/indicators
-// Retourne les derniers indicateurs économiques (public — cache 5 min)
+// Retourne les derniers indicateurs économiques filtrés par région.
+// - Si user authentifié: filtre par user.region
+// - Si query ?region=XX: override explicite (utile pour landing page)
+// - Sinon: QC par défaut (rétro-compat)
 // ===================================================
-router.get('/indicators', async (req, res) => {
+router.get('/indicators', optionalAuth, async (req, res) => {
   try {
-    const { category } = req.query;
-    const indicators = await getLatestIndicators(category || null);
+    const { category, region: regionQuery } = req.query;
+
+    let region = regionQuery ? regionQuery.toUpperCase() : null;
+    if (!region && req.user?.id) {
+      const u = await prisma.user.findUnique({
+        where: { id: req.user.id },
+        select: { region: true }
+      });
+      region = u?.region || null;
+    }
+    if (!region) region = 'QC';
+
+    const indicators = await getLatestIndicators(category || null, region);
 
     res.json({
       success: true,
       data: indicators,
+      region,
       count: indicators.length
     });
   } catch (error) {

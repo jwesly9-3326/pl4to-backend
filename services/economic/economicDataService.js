@@ -6,11 +6,24 @@ const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
 const { fetchAllSeries } = require('./providers/bankOfCanada');
-const { fetchAllVectors } = require('./providers/statcan');
+const { fetchMultiRegion, REGIONAL_VECTORS } = require('./providers/statcan');
 const { generateAlertsForIndicator, cleanExpiredAlerts } = require('./alertGenerator');
 
 // Intervalle minimum entre deux fetches (6 heures)
 const MIN_FETCH_INTERVAL_MS = 6 * 60 * 60 * 1000;
+
+/**
+ * Détermine quelles régions fetcher: toutes les régions distinctes des users actifs.
+ * Fallback sur QC s'il n'y a aucun user actif.
+ */
+async function getActiveRegions() {
+  const rows = await prisma.user.groupBy({
+    by: ['region'],
+    where: { region: { not: null } }
+  });
+  const regions = rows.map(r => r.region).filter(r => r && REGIONAL_VECTORS[r]);
+  return regions.length > 0 ? regions : ['QC'];
+}
 
 /**
  * Orchestre la mise à jour complète des données économiques
@@ -28,12 +41,15 @@ async function processEconomicData() {
       return { skipped: true, reason: 'Dernière mise à jour < 6h' };
     }
 
-    console.log(`[📊 ECON] Début de la mise à jour des indicateurs économiques...`);
+    // Régions actives (distinctes des users actuels)
+    const activeRegions = await getActiveRegions();
+    console.log(`[📊 ECON] Début update - régions actives: ${activeRegions.join(', ')}`);
 
     // 1. Fetch toutes les sources en parallèle
+    // BoC = national (une seule fois). StatCan = une fois par région active.
     const [bocData, statcanData] = await Promise.all([
       fetchAllSeries(),
-      fetchAllVectors()
+      fetchMultiRegion(activeRegions)
     ]);
 
     const allData = [...bocData, ...statcanData];
@@ -118,34 +134,27 @@ async function processEconomicData() {
 
 /**
  * Retourne les derniers indicateurs économiques (pour le frontend)
+ * Filtre par région: garde toujours les indicateurs BoC (nationaux) +
+ * uniquement les vecteurs StatCan de la région demandée (seriesKey contient _{REGION}_).
  * @param {string} category - Filtre optionnel par catégorie
+ * @param {string} region - Code région (QC, ON, ...). Si null, aucun filtre régional.
  */
-async function getLatestIndicators(category = null) {
-  try {
-    // Sous-requête: dernier indicateur par seriesKey
-    const where = category ? { category } : {};
+async function getLatestIndicators(category = null, region = null) {
+  const where = category ? { category } : {};
+  const indicators = await prisma.economicIndicator.findMany({
+    where,
+    orderBy: { observationDate: 'desc' },
+    distinct: ['seriesKey']
+  });
 
-    const indicators = await prisma.$queryRaw`
-      SELECT DISTINCT ON ("seriesKey")
-        id, source, category, "seriesKey", label_fr, label_en,
-        value, "previousValue", unit, "changePercent",
-        "observationDate", "fetchedAt"
-      FROM economic_indicators
-      ${category ? prisma.$queryRaw`WHERE category = ${category}` : prisma.$queryRaw``}
-      ORDER BY "seriesKey", "observationDate" DESC
-    `;
+  if (!region) return indicators;
 
-    return indicators;
-  } catch (error) {
-    // Fallback: requête simple si raw query échoue
-    const where = category ? { category } : {};
-    const indicators = await prisma.economicIndicator.findMany({
-      where,
-      orderBy: { observationDate: 'desc' },
-      distinct: ['seriesKey']
-    });
-    return indicators;
-  }
+  // Filtrage région: BoC (source='boc') = toujours gardés (nationaux).
+  // StatCan: on garde seulement ceux dont seriesKey contient _{REGION}_.
+  const regionTag = `_${region}_`;
+  return indicators.filter(i =>
+    i.source === 'boc' || i.seriesKey.includes(regionTag)
+  );
 }
 
 /**

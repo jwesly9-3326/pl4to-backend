@@ -7,34 +7,36 @@ const axios = require('axios');
 const WDS_URL = 'https://www150.statcan.gc.ca/t1/wds/rest/getDataFromVectorsAndLatestNPeriods';
 
 // Vecteurs à suivre (Québec)
+// Gasoline: table 18-10-0001 (by city) — Montréal used as QC proxy
+// CPI: table 18-10-0004 (by province) — Quebec province-level
 const STATCAN_VECTORS = [
   {
-    vectorId: 735083,
-    seriesKey: 'SC_735083',
+    vectorId: 735096,
+    seriesKey: 'SC_735096',
     category: 'fuel',
-    label_fr: 'Essence régulière — Québec',
-    label_en: 'Regular Gasoline — Quebec',
+    label_fr: 'Essence régulière — Montréal',
+    label_en: 'Regular Gasoline — Montreal',
     unit: 'cents_per_litre'
   },
   {
-    vectorId: 41690973,
-    seriesKey: 'SC_41690973',
+    vectorId: 41691783,
+    seriesKey: 'SC_41691783',
     category: 'cpi',
     label_fr: 'IPC Global — Québec',
     label_en: 'CPI All Items — Quebec',
     unit: 'index'
   },
   {
-    vectorId: 41690978,
-    seriesKey: 'SC_41690978',
+    vectorId: 41691784,
+    seriesKey: 'SC_41691784',
     category: 'food',
     label_fr: 'IPC Alimentation — Québec',
     label_en: 'CPI Food — Quebec',
     unit: 'index'
   },
   {
-    vectorId: 41691033,
-    seriesKey: 'SC_41691033',
+    vectorId: 41691852,
+    seriesKey: 'SC_41691852',
     category: 'transport',
     label_fr: 'IPC Transport — Québec',
     label_en: 'CPI Transportation — Quebec',

@@ -1794,7 +1794,7 @@ app.post('/api/generer-gps-financier-complet', (req, res) => {
 // Register (Inscription) - 🛡️ Rate limit: 3/heure
 app.post('/api/auth/register', registerLimiter, async (req, res) => {
   try {
-    const { nom, prenom, email, password, ref } = req.body;
+    const { nom, prenom, email, password, ref, country, region, currency, timezone } = req.body;
 
     // Validation
     if (!nom || !prenom || !email || !password) {
@@ -1902,6 +1902,11 @@ app.post('/api/auth/register', registerLimiter, async (req, res) => {
         emailVerified: false,
         verificationCode: verificationCode,
         verificationCodeExpires: verificationCodeExpires,
+        // 🌍 Régionalisation
+        country: country?.trim().toUpperCase() || 'CA',
+        region: region?.trim().toUpperCase() || 'QC',
+        currency: currency?.trim().toUpperCase() || 'CAD',
+        timezone: timezone?.trim() || 'America/Toronto',
         // Trial (peut être partiel si réinscription)
         subscriptionPlan: subscriptionPlan,
         trialStartDate: trialStartDate,
@@ -2096,7 +2101,11 @@ app.post('/api/auth/verify-email', async (req, res) => {
         trialActive: updatedUser.trialActive,
         trialEndDate: updatedUser.trialEndDate,
         onboardingCompleted: updatedUser.onboardingCompleted,
-        guideCompleted: updatedUser.guideCompleted
+        guideCompleted: updatedUser.guideCompleted,
+        country: updatedUser.country,
+        region: updatedUser.region,
+        currency: updatedUser.currency,
+        timezone: updatedUser.timezone
       },
       subscription: {
         currentPlan: updatedUser.subscriptionPlan,

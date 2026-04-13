@@ -7,15 +7,23 @@ const prisma = require('../../prisma-client');
 const calendarEventTemplate = require('./templates/communication/calendarEvent');
 const weeklyReportTemplate = require('./templates/communication/weeklyReport');
 
-const { buildFinancialSnapshot, buildComparativeInsights, getWeekStartDate } = require('./snapshotBuilder');
+const { buildFinancialSnapshot, buildComparativeInsights, detectChanges, getWeekStartDate } = require('./snapshotBuilder');
+const { computeEaster, computeMothersDay, computeFathersDay, computeThanksgiving, computeLabourDay } = require('./utils/calendarDates');
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 const FROM_EMAIL = process.env.FROM_EMAIL || 'PL4TO <contact@pl4to.com>';
 
 // ============================================
 // CALENDRIER DES ÉVÉNEMENTS
-// Dates fixes des événements à communiquer
+// Dates dynamiques pour fêtes mobiles (Pâques, Fête des Mères, etc.)
 // ============================================
+const currentYear = new Date().getFullYear();
+const easterDate = computeEaster(currentYear);
+const mothersDayDate = computeMothersDay(currentYear);
+const fathersDayDate = computeFathersDay(currentYear);
+const thanksgivingDate = computeThanksgiving(currentYear);
+const labourDayDate = computeLabourDay(currentYear);
+
 const CALENDAR_EVENTS = [
   {
     id: 'saint-valentin',
@@ -57,9 +65,9 @@ const CALENDAR_EVENTS = [
     name_fr: 'Pâques',
     name_en: 'Easter',
     emoji: '🐰',
-    month_fr: 'avril',
-    month_en: 'April',
-    date: { month: 4, day: 20 }, // Date approximative, ajuster chaque année
+    month_fr: easterDate.month <= 3 ? 'mars' : 'avril',
+    month_en: easterDate.month <= 3 ? 'March' : 'April',
+    date: easterDate, // 🔧 Calculé dynamiquement — Pâques 2026 = 5 avril
     description_fr: 'Brunch familial et chocolats',
     description_en: 'Family brunch and chocolate',
     category_fr: 'Fêtes',
@@ -69,6 +77,42 @@ const CALENDAR_EVENTS = [
     greeting_en: 'Happy Easter!',
     funFact_fr: 'Saviez-vous que les Canadiens dépensent en moyenne 20$ en chocolats à Pâques? PL4TO avait déjà prévu cette douce dépense! 🍫',
     funFact_en: 'Did you know Canadians spend an average of $20 on Easter chocolate? PL4TO had already planned for this sweet expense! 🍫'
+  },
+  {
+    id: 'fete-meres',
+    name_fr: 'Fête des Mères',
+    name_en: 'Mother\'s Day',
+    emoji: '🌸',
+    month_fr: 'mai',
+    month_en: 'May',
+    date: mothersDayDate, // 🔧 2e dimanche de mai — calculé dynamiquement
+    description_fr: 'Cadeau et restaurant',
+    description_en: 'Gift and restaurant',
+    category_fr: 'Famille',
+    category_en: 'Family',
+    color: '#ec4899',
+    greeting_fr: 'Bonne Fête des Mères!',
+    greeting_en: 'Happy Mother\'s Day!',
+    funFact_fr: 'Les Canadiens dépensent en moyenne 120$ pour la Fête des Mères. PL4TO avait déjà prévu cette attention dans ta trajectoire! 💐',
+    funFact_en: 'Canadians spend an average of $120 on Mother\'s Day. PL4TO already planned this treat in your trajectory! 💐'
+  },
+  {
+    id: 'fete-peres',
+    name_fr: 'Fête des Pères',
+    name_en: 'Father\'s Day',
+    emoji: '👔',
+    month_fr: 'juin',
+    month_en: 'June',
+    date: fathersDayDate, // 🔧 3e dimanche de juin — calculé dynamiquement
+    description_fr: 'Cadeau et activité',
+    description_en: 'Gift and activity',
+    category_fr: 'Famille',
+    category_en: 'Family',
+    color: '#3b82f6',
+    greeting_fr: 'Bonne Fête des Pères!',
+    greeting_en: 'Happy Father\'s Day!',
+    funFact_fr: 'Un bon repas, une activité ensemble... PL4TO avait déjà prévu le budget pour cette journée spéciale! 🎣',
+    funFact_en: 'A good meal, an activity together... PL4TO had already budgeted for this special day! 🎣'
   },
   {
     id: 'fete-nationale',
@@ -89,6 +133,24 @@ const CALENDAR_EVENTS = [
     funFact_en: 'Summer is when leisure spending peaks. PL4TO planned ahead so you can enjoy stress-free! ☀️'
   },
   {
+    id: 'canada-day',
+    name_fr: 'Fête du Canada',
+    name_en: 'Canada Day',
+    emoji: '🇨🇦',
+    month_fr: 'juillet',
+    month_en: 'July',
+    date: { month: 7, day: 1 },
+    description_fr: 'Célébrations et BBQ',
+    description_en: 'Celebrations and BBQ',
+    category_fr: 'Fêtes',
+    category_en: 'Holidays',
+    color: '#ef4444',
+    greeting_fr: 'Bonne Fête du Canada!',
+    greeting_en: 'Happy Canada Day!',
+    funFact_fr: 'BBQ, feux d\'artifice, festivités... PL4TO avait intégré cette journée dans ta trajectoire depuis longtemps! 🇨🇦',
+    funFact_en: 'BBQ, fireworks, celebrations... PL4TO had this day in your trajectory all along! 🇨🇦'
+  },
+  {
     id: 'rentree',
     name_fr: 'Rentrée scolaire',
     name_en: 'Back to School',
@@ -107,6 +169,24 @@ const CALENDAR_EVENTS = [
     funFact_en: 'Back to school costs an average of $400 per child in Canada. PL4TO had factored these expenses into your trajectory months ago! 🎒'
   },
   {
+    id: 'fete-travail',
+    name_fr: 'Fête du Travail',
+    name_en: 'Labour Day',
+    emoji: '⚒️',
+    month_fr: 'septembre',
+    month_en: 'September',
+    date: labourDayDate, // 🔧 1er lundi de septembre — calculé dynamiquement
+    description_fr: 'Fin de l\'été',
+    description_en: 'End of summer',
+    category_fr: 'Fêtes',
+    category_en: 'Holidays',
+    color: '#6366f1',
+    greeting_fr: 'Bonne Fête du Travail!',
+    greeting_en: 'Happy Labour Day!',
+    funFact_fr: 'La Fête du Travail marque la fin de l\'été et le début d\'une nouvelle routine. PL4TO est prêt! 🍂',
+    funFact_en: 'Labour Day marks the end of summer and a new routine. PL4TO is ready! 🍂'
+  },
+  {
     id: 'halloween',
     name_fr: 'Halloween',
     name_en: 'Halloween',
@@ -123,6 +203,24 @@ const CALENDAR_EVENTS = [
     greeting_en: 'Happy Halloween!',
     funFact_fr: 'Halloween est devenu la 2e fête la plus dépensière après Noël en Amérique du Nord. Costumes, bonbons, décor... PL4TO avait tout prévu! 👻',
     funFact_en: 'Halloween has become the 2nd most expensive holiday after Christmas in North America. Costumes, candy, decor... PL4TO had it all planned! 👻'
+  },
+  {
+    id: 'action-grace',
+    name_fr: 'Action de Grâce',
+    name_en: 'Thanksgiving',
+    emoji: '🦃',
+    month_fr: 'octobre',
+    month_en: 'October',
+    date: thanksgivingDate, // 🔧 2e lundi d'octobre — calculé dynamiquement
+    description_fr: 'Repas familial',
+    description_en: 'Family meal',
+    category_fr: 'Fêtes',
+    category_en: 'Holidays',
+    color: '#f59e0b',
+    greeting_fr: 'Joyeuse Action de Grâce!',
+    greeting_en: 'Happy Thanksgiving!',
+    funFact_fr: 'Un repas de Thanksgiving moyen coûte 50-80$ en épicerie. PL4TO l\'avait intégré dans ta trajectoire! 🦃',
+    funFact_en: 'An average Thanksgiving meal costs $50-80 in groceries. PL4TO factored it into your trajectory! 🦃'
   },
   {
     id: 'noel',
@@ -225,7 +323,8 @@ function getNextEvent(lang = 'fr') {
     emoji: next.emoji,
     name: next[`name_${lang}`] || next.name || next[`name_fr`],
     description: next[`description_${lang}`] || next.description_fr,
-    timeUntil
+    timeUntil,
+    daysUntil
   };
 }
 
@@ -389,11 +488,15 @@ async function sendWeeklyReportEmails() {
       // 📸 NOUVEAU: Construire le snapshot financier
       let snapshot = null;
       let comparativeInsights = null;
+      let changedSections = null;
 
       try {
         snapshot = await buildFinancialSnapshot(user.id);
 
         if (snapshot) {
+          // Ajouter le prochain événement (avec daysUntil pour la comparaison)
+          snapshot.nextEvent = getNextEvent(lang);
+
           // Chercher le snapshot précédent pour comparaison
           const previousSnapshot = await prisma.weeklyReportSnapshot.findFirst({
             where: { userId: user.id },
@@ -406,16 +509,19 @@ async function sendWeeklyReportEmails() {
               ? JSON.parse(previousSnapshot.financialSnapshot)
               : previousSnapshot.financialSnapshot;
             comparativeInsights = buildComparativeInsights(snapshot, prevData, lang);
+            changedSections = detectChanges(snapshot, prevData);
+          } else {
+            changedSections = detectChanges(snapshot, null); // Premier rapport
           }
 
-          console.log(`[Communication] 📸 Snapshot construit pour ${user.email} (comparison: ${comparativeInsights ? 'oui' : 'non'})`);
+          console.log(`[Communication] 📸 Snapshot construit pour ${user.email} (comparison: ${comparativeInsights ? 'oui' : 'non'}, changes: ${JSON.stringify(changedSections)})`);
         }
       } catch (snapshotErr) {
         console.error(`[Communication] ⚠️ Snapshot error for ${user.email}, proceeding without:`, snapshotErr.message);
       }
 
       // Construire le rapport enrichi
-      const report = await buildUserReport(user.id, lang, { snapshot, comparativeInsights });
+      const report = await buildUserReport(user.id, lang, { snapshot, comparativeInsights, changedSections });
 
       const { subject, html } = template.generate(user.prenom, report, user.id);
 
@@ -488,22 +594,37 @@ async function sendWeeklyReportEmails() {
 // CONSTRUIRE LE RAPPORT UTILISATEUR
 // ============================================
 async function buildUserReport(userId, lang = 'fr', options = {}) {
-  const { snapshot = null, comparativeInsights = null } = options;
+  const { snapshot = null, comparativeInsights = null, changedSections = null } = options;
 
   // Récupérer les données utilisateur
   const userData = await prisma.userData.findUnique({
     where: { userId }
   });
 
+  // Par défaut: tout afficher (si pas de changedSections = premier rapport ou pas de snapshot)
+  const defaultSections = {
+    showUpcomingWeek: true,
+    showNextEvent: true,
+    showEmergencyFund: true,
+    showEconomicIndicators: true,
+    showBudgetStatus: true,
+    showObjectifs: true,
+    showTrajectory: true,
+    isFirstReport: true,
+    changedGoalNames: null
+  };
+
   const report = {
     weekStart: getWeekStart(lang),
     budgetStatus: null,
     objectifs: [],
-    nextEvent: getNextEvent(lang),
-    // 📸 NOUVEAU: Champs comparatifs
+    nextEvent: snapshot?.nextEvent || getNextEvent(lang),
     highlights: [],
     comparisons: null,
-    alertesCount: 0
+    alertesCount: 0,
+    changedSections: changedSections || defaultSections,
+    semaineAVenir: snapshot?.semaineAVenir || null,
+    emergencyFund: snapshot?.emergencyFund || null
   };
 
   if (!userData) return report;
@@ -601,7 +722,10 @@ async function buildUserReport(userId, lang = 'fr', options = {}) {
         valeurNetteChange: comparativeInsights.portefeuille.valeurNetteChange,
         trend: comparativeInsights.portefeuille.trend
       };
-      report.highlights = comparativeInsights.highlights || [];
+      // Filtrer les highlights de valeur nette (remplacés par "Ta semaine à venir")
+      report.highlights = (comparativeInsights.highlights || []).filter(h =>
+        !h.message.includes('Valeur nette') && !h.message.includes('Net worth')
+      );
 
       // Enrichir chaque objectif avec le changement de progrès
       if (comparativeInsights.objectifsChanges) {

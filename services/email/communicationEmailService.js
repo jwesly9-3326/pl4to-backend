@@ -436,13 +436,30 @@ async function sendCalendarEventEmails() {
       
       sent++;
       console.log(`[Communication] ✅ Calendrier envoyé à ${user.email}`);
-      
+
+      // 📱 Push natif pour l'événement calendrier
+      try {
+        const { sendPushToUser } = require('../pushNotificationService');
+        const eventName = event[`name_${lang}`] || event.name || event.name_fr;
+        await sendPushToUser(user.id, {
+          title: `${event.emoji} ${eventName}`,
+          body: lang === 'fr'
+            ? `As-tu prévu ton budget pour ${eventName}?`
+            : `Did you plan your budget for ${eventName}?`
+        }, {
+          url: '/dashboard',
+          type: 'calendar_event'
+        });
+      } catch (pushErr) {
+        // Silencieux — email déjà envoyé
+      }
+
     } catch (err) {
       errors++;
       console.error(`[Communication] ❌ Erreur pour ${user.email}:`, err.message);
     }
   }
-  
+
   console.log(`[Communication] 📅 Résultat: ${sent} envoyés, ${errors} erreurs`);
   return { sent, errors, event: event.id };
 }
@@ -579,6 +596,23 @@ async function sendWeeklyReportEmails() {
 
       sent++;
       console.log(`[Communication] ✅ Résumé hebdo envoyé à ${user.email}`);
+
+      // 📱 Push natif pour le résumé hebdo
+      try {
+        const { sendPushToUser } = require('../pushNotificationService');
+        const lang = user.language || 'fr';
+        await sendPushToUser(user.id, {
+          title: lang === 'fr' ? '📊 Ton résumé de la semaine' : '📊 Your weekly summary',
+          body: lang === 'fr'
+            ? 'Découvre ton évolution financière cette semaine!'
+            : 'Discover your financial progress this week!'
+        }, {
+          url: '/parametres',
+          type: 'weekly_report'
+        });
+      } catch (pushErr) {
+        // Silencieux
+      }
 
     } catch (err) {
       errors++;

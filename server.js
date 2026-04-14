@@ -27,6 +27,7 @@ const communicationRoutes = require('./routes/communication.routes');
 const aiCoachRoutes = require('./routes/ai-coach.routes');
 const cryptoRoutes = require('./routes/crypto.routes');
 const notificationsRoutes = require('./routes/notifications.routes');
+const pushRoutes = require('./routes/push.routes');
 const economicRoutes = require('./routes/economic.routes');
 const { router: regionsRoutes } = require('./routes/regions.routes');
 
@@ -318,6 +319,7 @@ app.use('/api/crypto', cryptoRoutes);
 // ROUTES NOTIFICATIONS (Push Web)
 // ============================================
 app.use('/api/notifications', authenticateToken, notificationsRoutes);
+app.use('/api/push', authenticateToken, pushRoutes);
 
 // ============================================
 // ROUTES INTELLIGENCE ÉCONOMIQUE

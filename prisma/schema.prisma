@@ -105,6 +105,12 @@ model User {
 
   // 🔔 Push Notifications
   pushSubscriptions      PushSubscription[]
+  nativeDeviceTokens     NativeDeviceToken[]
+
+  // 📱 Résumé quotidien
+  dailySummaryEnabled    Boolean   @default(true)     // Résumé quotidien activé par défaut
+  dailySummaryTime       Int       @default(8)        // Heure d'envoi (0-23, heure locale)
+  lastDailySummaryAt     DateTime?                     // Dernier résumé quotidien envoyé
 
   @@map("users")
 }
@@ -704,6 +710,25 @@ model PushSubscription {
 
   @@map("push_subscriptions")
   @@unique([userId, endpoint])
+  @@index([userId])
+}
+
+// ============================================
+// 📱 NATIVE DEVICE TOKENS — Tokens push natifs (iOS APNs via FCM, Android FCM)
+// Stocke les tokens de chaque appareil pour envoyer des notifications push natives
+// ============================================
+model NativeDeviceToken {
+  id         String   @id @default(uuid())
+  userId     String
+  token      String   // Token FCM du device
+  platform   String   // 'ios' ou 'android'
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("native_device_tokens")
+  @@unique([userId, token])
   @@index([userId])
 }
 

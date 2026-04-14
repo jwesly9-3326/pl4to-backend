@@ -5,6 +5,80 @@
 const FRONTEND_URL = process.env.FRONTEND_URL || 'https://pl4to.com';
 const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:3000';
 
+/**
+ * 💡 Coach PL4TO — génère des messages motivationnels basés sur l'état du rapport
+ * Retourne max 2 messages pour ne pas surcharger l'email
+ */
+function getCoachingMessage(report, lang) {
+  const messages = [];
+  const isFr = lang === 'fr';
+
+  // 1. Coaching basé sur la valeur nette (comparisons.valeurNetteChange)
+  const netChange = report.comparisons?.valeurNetteChange;
+  if (typeof netChange === 'number') {
+    if (netChange > 0) {
+      messages.push(isFr
+        ? `🚀 Ta valeur nette a grimpé de ${Math.abs(netChange).toLocaleString('fr-CA')} $ cette semaine. Continue comme ça!`
+        : `🚀 Your net worth grew by $${Math.abs(netChange).toLocaleString('en-CA')} this week. Keep it up!`
+      );
+    } else if (netChange < -100) {
+      messages.push(isFr
+        ? `📊 Ta valeur nette a bougé de ${netChange.toLocaleString('fr-CA')} $ cette semaine. C'est normal — les fluctuations font partie du parcours.`
+        : `📊 Your net worth moved by $${netChange.toLocaleString('en-CA')} this week. That's normal — fluctuations are part of the journey.`
+      );
+    }
+  }
+
+  // 2. Coaching basé sur les objectifs
+  if (report.objectifs && report.objectifs.length > 0) {
+    const reached = report.objectifs.filter(o => o.justReached);
+    const advancing = report.objectifs.filter(o => o.progressChange && o.progressChange > 0);
+
+    if (reached.length > 0) {
+      messages.push(isFr
+        ? `🎉 Félicitations! Tu as atteint ton objectif "${reached[0].name}"!`
+        : `🎉 Congratulations! You reached your goal "${reached[0].name}"!`
+      );
+    } else if (advancing.length > 0) {
+      messages.push(isFr
+        ? `🎯 Tu te rapproches de "${advancing[0].name}" (+${advancing[0].progressChange}% cette semaine). Chaque pas compte!`
+        : `🎯 You're getting closer to "${advancing[0].name}" (+${advancing[0].progressChange}% this week). Every step counts!`
+      );
+    }
+  }
+
+  // 3. Coaching basé sur le budget (string 'balanced' ou 'unbalanced')
+  if (report.budgetStatus === 'balanced' && messages.length < 2) {
+    messages.push(isFr
+      ? `✅ Ton budget est bien équilibré. Tu gardes le cap!`
+      : `✅ Your budget is well balanced. You're on track!`
+    );
+  } else if (report.budgetStatus === 'unbalanced' && messages.length < 2) {
+    messages.push(isFr
+      ? `⚠️ Ton budget montre un déséquilibre. Un petit ajustement dans PL4TO pourrait faire la différence.`
+      : `⚠️ Your budget shows an imbalance. A small adjustment in PL4TO could make a difference.`
+    );
+  }
+
+  // 4. Coaching basé sur le fonds d'urgence
+  if (report.emergencyFund && messages.length < 2) {
+    const months = report.emergencyFund.moisSurvie;
+    if (months >= 3) {
+      messages.push(isFr
+        ? `🛡️ Ton fonds d'urgence couvre ${months} mois. Solide protection!`
+        : `🛡️ Your emergency fund covers ${months} months. Solid protection!`
+      );
+    } else if (months < 1) {
+      messages.push(isFr
+        ? `🛡️ Ton fonds d'urgence est à ${months} mois. Vise au moins 3 mois — chaque dollar compte.`
+        : `🛡️ Your emergency fund is at ${months} months. Aim for at least 3 months — every dollar counts.`
+      );
+    }
+  }
+
+  return messages.slice(0, 2);
+}
+
 const weeklyReportTemplate = {
   fr: {
     generate: (prenom, report, userId) => ({
@@ -39,24 +113,62 @@ const weeklyReportTemplate = {
             </p>
           </div>
 
-          <!-- 📊 Highlights comparatifs (si disponibles) -->
-          ${report.highlights && report.highlights.length > 0 ? `
+          <!-- 🗓️ SECTION 1: Ta semaine à venir (TOUJOURS affichée) -->
+          ${report.semaineAVenir && report.semaineAVenir.transactions.length > 0 ? `
           <div style="background: linear-gradient(135deg, #667eea15 0%, #764ba215 100%); border-radius: 16px; padding: 24px; margin-bottom: 15px; border: 1px solid #667eea30;">
             <p style="color: #667eea; font-size: 13px; text-transform: uppercase; letter-spacing: 1px; margin: 0 0 14px 0; font-weight: bold;">
-              📊 Cette semaine
+              🗓️ Ta semaine à venir
             </p>
-            ${report.highlights.map(h => `
-            <div style="margin-bottom: 8px;">
-              <p style="color: #333; font-size: 14px; line-height: 1.5; margin: 0;">
-                ${h.icon} ${h.message}
-              </p>
+            ${report.semaineAVenir.transactions.slice(0, 5).map(t => {
+              const dateObj = new Date(t.date + 'T00:00:00');
+              const dayName = dateObj.toLocaleDateString('fr-CA', { weekday: 'short' });
+              const dateLabel = dateObj.toLocaleDateString('fr-CA', { day: 'numeric', month: 'short' });
+              const isExpense = t.type === 'expense';
+              return `
+              <div style="margin-bottom: 6px; padding: 6px 0; border-bottom: 1px solid #e9ecef;">
+                <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse: collapse;">
+                  <tr>
+                    <td style="color: #333; font-size: 14px;">${t.name}</td>
+                    <td style="color: #999; font-size: 12px; text-align: center; width: 90px;">${dayName} ${dateLabel}</td>
+                    <td style="color: ${isExpense ? '#ef4444' : '#22c55e'}; font-size: 14px; font-weight: bold; text-align: right; width: 80px;">
+                      ${isExpense ? '-' : '+'}${Math.abs(t.amount).toLocaleString('fr-CA')} $
+                    </td>
+                  </tr>
+                </table>
+              </div>`;
+            }).join('')}
+            <div style="margin-top: 10px; padding-top: 10px; border-top: 2px solid #667eea30;">
+              <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse: collapse;">
+                <tr>
+                  <td style="color: #666; font-size: 13px;">Total sorties cette semaine</td>
+                  <td style="color: #ef4444; font-size: 14px; font-weight: bold; text-align: right;">
+                    -${report.semaineAVenir.totalSorties.toLocaleString('fr-CA')} $
+                  </td>
+                </tr>
+              </table>
             </div>
-            `).join('')}
           </div>
           ` : ''}
 
-          <!-- 📅 Calendrier - Prochain événement -->
-          ${report.nextEvent ? `
+          <!-- 💡 COACHING PL4TO (FR) -->
+          ${(() => {
+            const coaching = getCoachingMessage(report, 'fr');
+            if (coaching.length === 0) return '';
+            return `
+            <div style="background: linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%); border-radius: 16px; padding: 20px 24px; margin-bottom: 15px; border: 1px solid #bbf7d0;">
+              <p style="color: #166534; font-size: 13px; text-transform: uppercase; letter-spacing: 1px; margin: 0 0 10px 0; font-weight: bold;">
+                💡 Coach PL4TO
+              </p>
+              ${coaching.map(msg => `
+                <p style="color: #15803d; font-size: 14px; margin: 0 0 8px 0; line-height: 1.5;">
+                  ${msg}
+                </p>
+              `).join('')}
+            </div>`;
+          })()}
+
+          <!-- 📅 SECTION 2: Prochain événement (seulement si changé) -->
+          ${report.changedSections.showNextEvent && report.nextEvent ? `
           <div style="background: #f8f9fa; border-radius: 16px; padding: 24px; margin-bottom: 15px; border: 1px solid #e9ecef;">
             <p style="color: #999; font-size: 13px; text-transform: uppercase; letter-spacing: 1px; margin: 0 0 12px 0;">
               📅 Prochain événement
@@ -70,8 +182,36 @@ const weeklyReportTemplate = {
           </div>
           ` : ''}
 
-          <!-- 📊 Budget - Status -->
-          ${report.budgetStatus ? `
+          <!-- 🛡️ SECTION 3: Fonds d'urgence (seulement si changé ou critique) -->
+          ${report.changedSections.showEmergencyFund && report.emergencyFund ? `
+          <div style="background: ${report.emergencyFund.status === 'critical' ? '#fef2f2' : report.emergencyFund.status === 'low' ? '#fffbeb' : '#f0fdf4'}; border-radius: 16px; padding: 24px; margin-bottom: 15px; border: 1px solid ${report.emergencyFund.status === 'critical' ? '#fecaca' : report.emergencyFund.status === 'low' ? '#fef3c7' : '#bbf7d0'};">
+            <p style="color: #999; font-size: 13px; text-transform: uppercase; letter-spacing: 1px; margin: 0 0 12px 0;">
+              🛡️ Fonds d'urgence
+            </p>
+            <table cellpadding="0" cellspacing="0" style="border-collapse: collapse;">
+              <tr>
+                <td style="vertical-align: middle; padding-right: 12px; font-size: 24px;">
+                  ${report.emergencyFund.status === 'critical' ? '🚨' : report.emergencyFund.status === 'low' ? '⚠️' : '✅'}
+                </td>
+                <td style="vertical-align: middle;">
+                  <p style="color: ${report.emergencyFund.status === 'critical' ? '#ef4444' : report.emergencyFund.status === 'low' ? '#f59e0b' : '#22c55e'}; font-size: 16px; font-weight: bold; margin: 0;">
+                    ${report.emergencyFund.moisSurvie} mois de réserve
+                  </p>
+                  <p style="color: #666; font-size: 14px; margin: 4px 0 0 0;">
+                    ${report.emergencyFund.status === 'critical' ? 'Chaque petit montant mis de côté compte!' : report.emergencyFund.status === 'low' ? 'Tu progresses! Objectif: 6 mois.' : 'Ton fonds est en bonne santé!'}
+                  </p>
+                </td>
+              </tr>
+            </table>
+            <div style="background: #e9ecef; border-radius: 4px; height: 6px; margin-top: 12px; overflow: hidden;">
+              <div style="background: ${report.emergencyFund.status === 'critical' ? '#ef4444' : report.emergencyFund.status === 'low' ? '#f59e0b' : '#22c55e'}; height: 100%; width: ${Math.min((report.emergencyFund.moisSurvie / 6) * 100, 100)}%; border-radius: 4px;"></div>
+            </div>
+            <p style="color: #999; font-size: 11px; margin: 4px 0 0 0; text-align: right;">${report.emergencyFund.moisSurvie} / 6 mois</p>
+          </div>
+          ` : ''}
+
+          <!-- 📋 SECTION 4: Budget (seulement si le statut a changé) -->
+          ${report.changedSections.showBudgetStatus && report.budgetStatus ? `
           <div style="background: #f8f9fa; border-radius: 16px; padding: 24px; margin-bottom: 15px; border: 1px solid #e9ecef;">
             <p style="color: #999; font-size: 13px; text-transform: uppercase; letter-spacing: 1px; margin: 0 0 12px 0;">
               📋 Répartition budgétaire
@@ -100,13 +240,17 @@ const weeklyReportTemplate = {
           </div>
           ` : ''}
 
-          <!-- 🎯 Objectifs -->
-          ${report.objectifs && report.objectifs.length > 0 ? `
+          <!-- 🧭 SECTION 5: Objectifs en mouvement (seulement ceux qui ont bougé) -->
+          ${report.changedSections.showObjectifs && report.objectifs && report.objectifs.length > 0 ? `
           <div style="background: #f8f9fa; border-radius: 16px; padding: 24px; margin-bottom: 15px; border: 1px solid #e9ecef;">
             <p style="color: #999; font-size: 13px; text-transform: uppercase; letter-spacing: 1px; margin: 0 0 15px 0;">
-              🧭 Tes objectifs
+              🧭 Objectifs en mouvement
             </p>
-            ${report.objectifs.map(obj => `
+            ${report.objectifs.filter(obj =>
+                !report.changedSections.changedGoalNames ||
+                report.changedSections.changedGoalNames.includes(obj.name) ||
+                report.changedSections.isFirstReport
+              ).map(obj => `
             <div style="margin-bottom: 14px;">
               <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse: collapse;">
                 <tr>
@@ -125,8 +269,9 @@ const weeklyReportTemplate = {
           </div>
           ` : ''}
 
-          <!-- 🚦 Alertes - Teaser enrichi -->
-          <div style="background: ${report.alertesCount > 0 ? '#fef2f2' : '#fffbeb'}; border-radius: 16px; padding: 24px; margin-bottom: 20px; border: 1px solid ${report.alertesCount > 0 ? '#fecaca' : '#fef3c7'};">
+          <!-- 🚦 SECTION 6: Trajectoire (seulement si le nombre d'alertes a changé) -->
+          ${report.changedSections.showTrajectory ? `
+          <div style="background: ${report.alertesCount > 0 ? '#fef2f2' : '#fffbeb'}; border-radius: 16px; padding: 24px; margin-bottom: 15px; border: 1px solid ${report.alertesCount > 0 ? '#fecaca' : '#fef3c7'};">
             <p style="color: #999; font-size: 13px; text-transform: uppercase; letter-spacing: 1px; margin: 0 0 12px 0;">
               🚦 Trajectoire financière
             </p>
@@ -143,9 +288,30 @@ const weeklyReportTemplate = {
             </p>
             `}
           </div>
+          ` : ''}
+
+          <!-- ✨ Message "Tout est stable" quand rien n'a changé -->
+          ${!report.changedSections.showNextEvent && !report.changedSections.showEmergencyFund &&
+            !report.changedSections.showBudgetStatus && !report.changedSections.showObjectifs &&
+            !report.changedSections.showTrajectory ? `
+          <div style="background: #f0fdf4; border-radius: 16px; padding: 24px; margin-bottom: 15px; border: 1px solid #bbf7d0; text-align: center;">
+            <p style="font-size: 24px; margin: 0 0 8px 0;">✨</p>
+            <p style="color: #22c55e; font-size: 16px; font-weight: bold; margin: 0 0 4px 0;">
+              Tout est stable cette semaine
+            </p>
+            <p style="color: #666; font-size: 14px; margin: 0;">
+              Ton budget, tes objectifs et ta trajectoire sont dans la même direction. Continue!
+            </p>
+          </div>
+          ` : ''}
 
           <!-- CTA -->
           <div style="text-align: center; margin-bottom: 35px;">
+            <p style="color: #666; font-size: 14px; text-align: center; margin: 0 0 15px 0;">
+              ${report.comparisons?.valeurNetteChange > 0
+                ? '📈 Ta trajectoire progresse — viens voir le détail!'
+                : '🧭 Ton GPS financier t\'attend — navigue dans ta semaine!'}
+            </p>
             <a href="${FRONTEND_URL}" style="display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #ffffff; padding: 16px 40px; border-radius: 50px; text-decoration: none; font-weight: bold; font-size: 16px; box-shadow: 0 6px 20px rgba(102, 126, 234, 0.3);">
               <!--[if mso]><i style="mso-font-width:200%;mso-text-raise:30pt">&nbsp;</i><![endif]-->
               <span style="color: #ffffff;">Ouvrir mon PL4TO →</span>
@@ -217,24 +383,62 @@ const weeklyReportTemplate = {
             </p>
           </div>
 
-          <!-- 📊 Comparative highlights (if available) -->
-          ${report.highlights && report.highlights.length > 0 ? `
+          <!-- 🗓️ SECTION 1: Your week ahead (ALWAYS shown) -->
+          ${report.semaineAVenir && report.semaineAVenir.transactions.length > 0 ? `
           <div style="background: linear-gradient(135deg, #667eea15 0%, #764ba215 100%); border-radius: 16px; padding: 24px; margin-bottom: 15px; border: 1px solid #667eea30;">
             <p style="color: #667eea; font-size: 13px; text-transform: uppercase; letter-spacing: 1px; margin: 0 0 14px 0; font-weight: bold;">
-              📊 This week
+              🗓️ Your week ahead
             </p>
-            ${report.highlights.map(h => `
-            <div style="margin-bottom: 8px;">
-              <p style="color: #333; font-size: 14px; line-height: 1.5; margin: 0;">
-                ${h.icon} ${h.message}
-              </p>
+            ${report.semaineAVenir.transactions.slice(0, 5).map(t => {
+              const dateObj = new Date(t.date + 'T00:00:00');
+              const dayName = dateObj.toLocaleDateString('en-CA', { weekday: 'short' });
+              const dateLabel = dateObj.toLocaleDateString('en-CA', { day: 'numeric', month: 'short' });
+              const isExpense = t.type === 'expense';
+              return `
+              <div style="margin-bottom: 6px; padding: 6px 0; border-bottom: 1px solid #e9ecef;">
+                <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse: collapse;">
+                  <tr>
+                    <td style="color: #333; font-size: 14px;">${t.name}</td>
+                    <td style="color: #999; font-size: 12px; text-align: center; width: 90px;">${dayName} ${dateLabel}</td>
+                    <td style="color: ${isExpense ? '#ef4444' : '#22c55e'}; font-size: 14px; font-weight: bold; text-align: right; width: 80px;">
+                      ${isExpense ? '-' : '+'}${Math.abs(t.amount).toLocaleString('en-CA')} $
+                    </td>
+                  </tr>
+                </table>
+              </div>`;
+            }).join('')}
+            <div style="margin-top: 10px; padding-top: 10px; border-top: 2px solid #667eea30;">
+              <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse: collapse;">
+                <tr>
+                  <td style="color: #666; font-size: 13px;">Total outflows this week</td>
+                  <td style="color: #ef4444; font-size: 14px; font-weight: bold; text-align: right;">
+                    -${report.semaineAVenir.totalSorties.toLocaleString('en-CA')} $
+                  </td>
+                </tr>
+              </table>
             </div>
-            `).join('')}
           </div>
           ` : ''}
 
-          <!-- 📅 Calendar - Next event -->
-          ${report.nextEvent ? `
+          <!-- 💡 COACHING PL4TO (EN) -->
+          ${(() => {
+            const coaching = getCoachingMessage(report, 'en');
+            if (coaching.length === 0) return '';
+            return `
+            <div style="background: linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%); border-radius: 16px; padding: 20px 24px; margin-bottom: 15px; border: 1px solid #bbf7d0;">
+              <p style="color: #166534; font-size: 13px; text-transform: uppercase; letter-spacing: 1px; margin: 0 0 10px 0; font-weight: bold;">
+                💡 PL4TO Coach
+              </p>
+              ${coaching.map(msg => `
+                <p style="color: #15803d; font-size: 14px; margin: 0 0 8px 0; line-height: 1.5;">
+                  ${msg}
+                </p>
+              `).join('')}
+            </div>`;
+          })()}
+
+          <!-- 📅 SECTION 2: Next event (only if changed) -->
+          ${report.changedSections.showNextEvent && report.nextEvent ? `
           <div style="background: #f8f9fa; border-radius: 16px; padding: 24px; margin-bottom: 15px; border: 1px solid #e9ecef;">
             <p style="color: #999; font-size: 13px; text-transform: uppercase; letter-spacing: 1px; margin: 0 0 12px 0;">
               📅 Next event
@@ -248,8 +452,36 @@ const weeklyReportTemplate = {
           </div>
           ` : ''}
 
-          <!-- 📊 Budget - Status -->
-          ${report.budgetStatus ? `
+          <!-- 🛡️ SECTION 3: Emergency fund (only if changed or critical) -->
+          ${report.changedSections.showEmergencyFund && report.emergencyFund ? `
+          <div style="background: ${report.emergencyFund.status === 'critical' ? '#fef2f2' : report.emergencyFund.status === 'low' ? '#fffbeb' : '#f0fdf4'}; border-radius: 16px; padding: 24px; margin-bottom: 15px; border: 1px solid ${report.emergencyFund.status === 'critical' ? '#fecaca' : report.emergencyFund.status === 'low' ? '#fef3c7' : '#bbf7d0'};">
+            <p style="color: #999; font-size: 13px; text-transform: uppercase; letter-spacing: 1px; margin: 0 0 12px 0;">
+              🛡️ Emergency fund
+            </p>
+            <table cellpadding="0" cellspacing="0" style="border-collapse: collapse;">
+              <tr>
+                <td style="vertical-align: middle; padding-right: 12px; font-size: 24px;">
+                  ${report.emergencyFund.status === 'critical' ? '🚨' : report.emergencyFund.status === 'low' ? '⚠️' : '✅'}
+                </td>
+                <td style="vertical-align: middle;">
+                  <p style="color: ${report.emergencyFund.status === 'critical' ? '#ef4444' : report.emergencyFund.status === 'low' ? '#f59e0b' : '#22c55e'}; font-size: 16px; font-weight: bold; margin: 0;">
+                    ${report.emergencyFund.moisSurvie} months of reserve
+                  </p>
+                  <p style="color: #666; font-size: 14px; margin: 4px 0 0 0;">
+                    ${report.emergencyFund.status === 'critical' ? 'Every small amount set aside counts!' : report.emergencyFund.status === 'low' ? 'You\'re making progress! Goal: 6 months.' : 'Your fund is in great shape!'}
+                  </p>
+                </td>
+              </tr>
+            </table>
+            <div style="background: #e9ecef; border-radius: 4px; height: 6px; margin-top: 12px; overflow: hidden;">
+              <div style="background: ${report.emergencyFund.status === 'critical' ? '#ef4444' : report.emergencyFund.status === 'low' ? '#f59e0b' : '#22c55e'}; height: 100%; width: ${Math.min((report.emergencyFund.moisSurvie / 6) * 100, 100)}%; border-radius: 4px;"></div>
+            </div>
+            <p style="color: #999; font-size: 11px; margin: 4px 0 0 0; text-align: right;">${report.emergencyFund.moisSurvie} / 6 months</p>
+          </div>
+          ` : ''}
+
+          <!-- 📋 SECTION 4: Budget (only if status changed) -->
+          ${report.changedSections.showBudgetStatus && report.budgetStatus ? `
           <div style="background: #f8f9fa; border-radius: 16px; padding: 24px; margin-bottom: 15px; border: 1px solid #e9ecef;">
             <p style="color: #999; font-size: 13px; text-transform: uppercase; letter-spacing: 1px; margin: 0 0 12px 0;">
               📋 Budget overview
@@ -278,13 +510,17 @@ const weeklyReportTemplate = {
           </div>
           ` : ''}
 
-          <!-- 🎯 Goals -->
-          ${report.objectifs && report.objectifs.length > 0 ? `
+          <!-- 🧭 SECTION 5: Goals in motion (only those that moved) -->
+          ${report.changedSections.showObjectifs && report.objectifs && report.objectifs.length > 0 ? `
           <div style="background: #f8f9fa; border-radius: 16px; padding: 24px; margin-bottom: 15px; border: 1px solid #e9ecef;">
             <p style="color: #999; font-size: 13px; text-transform: uppercase; letter-spacing: 1px; margin: 0 0 15px 0;">
-              🧭 Your goals
+              🧭 Goals in motion
             </p>
-            ${report.objectifs.map(obj => `
+            ${report.objectifs.filter(obj =>
+                !report.changedSections.changedGoalNames ||
+                report.changedSections.changedGoalNames.includes(obj.name) ||
+                report.changedSections.isFirstReport
+              ).map(obj => `
             <div style="margin-bottom: 14px;">
               <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse: collapse;">
                 <tr>
@@ -303,8 +539,9 @@ const weeklyReportTemplate = {
           </div>
           ` : ''}
 
-          <!-- 🚦 Alerts - Enriched teaser -->
-          <div style="background: ${report.alertesCount > 0 ? '#fef2f2' : '#fffbeb'}; border-radius: 16px; padding: 24px; margin-bottom: 20px; border: 1px solid ${report.alertesCount > 0 ? '#fecaca' : '#fef3c7'};">
+          <!-- 🚦 SECTION 6: Trajectory (only if alert count changed) -->
+          ${report.changedSections.showTrajectory ? `
+          <div style="background: ${report.alertesCount > 0 ? '#fef2f2' : '#fffbeb'}; border-radius: 16px; padding: 24px; margin-bottom: 15px; border: 1px solid ${report.alertesCount > 0 ? '#fecaca' : '#fef3c7'};">
             <p style="color: #999; font-size: 13px; text-transform: uppercase; letter-spacing: 1px; margin: 0 0 12px 0;">
               🚦 Financial trajectory
             </p>
@@ -321,9 +558,30 @@ const weeklyReportTemplate = {
             </p>
             `}
           </div>
+          ` : ''}
+
+          <!-- ✨ "Everything is stable" message when nothing changed -->
+          ${!report.changedSections.showNextEvent && !report.changedSections.showEmergencyFund &&
+            !report.changedSections.showBudgetStatus && !report.changedSections.showObjectifs &&
+            !report.changedSections.showTrajectory ? `
+          <div style="background: #f0fdf4; border-radius: 16px; padding: 24px; margin-bottom: 15px; border: 1px solid #bbf7d0; text-align: center;">
+            <p style="font-size: 24px; margin: 0 0 8px 0;">✨</p>
+            <p style="color: #22c55e; font-size: 16px; font-weight: bold; margin: 0 0 4px 0;">
+              Everything is stable this week
+            </p>
+            <p style="color: #666; font-size: 14px; margin: 0;">
+              Your budget, goals and trajectory are all on track. Keep it up!
+            </p>
+          </div>
+          ` : ''}
 
           <!-- CTA -->
           <div style="text-align: center; margin-bottom: 35px;">
+            <p style="color: #666; font-size: 14px; text-align: center; margin: 0 0 15px 0;">
+              ${report.comparisons?.valeurNetteChange > 0
+                ? '📈 Your trajectory is progressing — come see the details!'
+                : '🧭 Your financial GPS awaits — navigate your week!'}
+            </p>
             <a href="${FRONTEND_URL}" style="display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #ffffff; padding: 16px 40px; border-radius: 50px; text-decoration: none; font-weight: bold; font-size: 16px; box-shadow: 0 6px 20px rgba(102, 126, 234, 0.3);">
               <!--[if mso]><i style="mso-font-width:200%;mso-text-raise:30pt">&nbsp;</i><![endif]-->
               <span style="color: #ffffff;">Open my PL4TO →</span>

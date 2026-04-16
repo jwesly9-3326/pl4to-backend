@@ -5,6 +5,7 @@ const { processTrialEmails } = require('../services/email/trialEmailService');
 const { processSubscriberEmails } = require('../services/email/subscriberEmailService');
 const { sendCalendarEventEmails, sendAdminPreviewEmails, sendWeeklyReportEmails } = require('../services/email/communicationEmailService');
 const { processEconomicData } = require('../services/economic/economicDataService');
+const { processDailySummaries } = require('../services/dailySummary.service');
 
 // Track: ne pas envoyer les emails calendrier plus d'une fois par jour
 let lastCalendarSendDate = null;
@@ -41,6 +42,9 @@ function startTrialEmailCron() {
 
       // 📈 Mise à jour des indicateurs économiques (toutes les 6h)
       await processEconomicIndicators();
+
+      // 📱 Résumés quotidiens push (filtre par heure préférée de l'utilisateur)
+      await processDailySummariesSafe();
     } catch (error) {
       console.error(`[❌ CRON] Erreur première exécution:`, error);
     }
@@ -64,6 +68,9 @@ function startTrialEmailCron() {
 
       // 📈 Mise à jour des indicateurs économiques (toutes les 6h)
       await processEconomicIndicators();
+
+      // 📱 Résumés quotidiens push (filtre par heure préférée de l'utilisateur)
+      await processDailySummariesSafe();
     } catch (error) {
       console.error(`[❌ CRON] Erreur:`, error);
     }
@@ -145,6 +152,20 @@ async function processEconomicIndicators() {
     }
   } catch (error) {
     console.error(`[❌ CRON] Erreur indicateurs économiques:`, error.message);
+  }
+}
+
+/**
+ * Envoie les résumés quotidiens push (wrapper safe)
+ */
+async function processDailySummariesSafe() {
+  try {
+    const result = await processDailySummaries();
+    if (result.sent > 0) {
+      console.log(`[⏰ CRON] 📱 Daily push: ${result.sent} envoyés sur ${result.total} utilisateurs`);
+    }
+  } catch (error) {
+    console.error(`[❌ CRON] Erreur résumés quotidiens:`, error.message);
   }
 }
 

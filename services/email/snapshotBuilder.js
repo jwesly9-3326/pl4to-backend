@@ -399,6 +399,184 @@ function calculateTrajectory6Months(accounts, soldes, budgetEntrees, budgetSorti
 }
 
 // ============================================
+// FONDS D'URGENCE
+// ============================================
+
+/**
+ * Calcule les mois de survie du fonds d'urgence
+ */
+function calculateEmergencyFund(comptes, budget) {
+  const totalLiquidites = comptes
+    .filter(c => c.type === 'cheque' || c.type === 'epargne')
+    .reduce((sum, c) => sum + Math.max(0, c.solde), 0);
+
+  const depensesMensuelles = budget.totalSortiesMensuelles || 0;
+  const moisSurvie = depensesMensuelles > 0
+    ? Math.round((totalLiquidites / depensesMensuelles) * 10) / 10
+    : 0;
+
+  let status = 'good';
+  if (moisSurvie < 1) status = 'critical';
+  else if (moisSurvie < 3) status = 'low';
+  else if (moisSurvie < 6) status = 'moderate';
+
+  return { moisSurvie: round2(moisSurvie), status, objectif: 6 };
+}
+
+// ============================================
+// SEMAINE À VENIR (7 prochains jours)
+// ============================================
+
+/**
+ * Calcule les transactions des 7 prochains jours
+ */
+function calculateUpcomingWeek(budgetEntrees, budgetSorties) {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const results = [];
+
+  for (let dayOffset = 1; dayOffset <= 7; dayOffset++) {
+    const checkDate = new Date(today);
+    checkDate.setDate(today.getDate() + dayOffset);
+
+    (budgetSorties || []).forEach(sortie => {
+      if (isTransactionOnDate(sortie, checkDate)) {
+        results.push({
+          name: sortie.description || 'Dépense',
+          amount: -(parseFloat(sortie.montant) || 0),
+          date: formatDateStr(checkDate),
+          type: 'expense'
+        });
+      }
+    });
+
+    (budgetEntrees || []).forEach(entree => {
+      if (isTransactionOnDate(entree, checkDate)) {
+        results.push({
+          name: entree.description || 'Revenu',
+          amount: parseFloat(entree.montant) || 0,
+          date: formatDateStr(checkDate),
+          type: 'income'
+        });
+      }
+    });
+  }
+
+  results.sort((a, b) => new Date(a.date) - new Date(b.date));
+
+  return {
+    transactions: results,
+    totalSorties: round2(results.filter(r => r.type === 'expense').reduce((s, r) => s + Math.abs(r.amount), 0)),
+    totalEntrees: round2(results.filter(r => r.type === 'income').reduce((s, r) => s + r.amount, 0)),
+    count: results.length
+  };
+}
+
+// ============================================
+// DÉTECTION DES CHANGEMENTS (delta hebdo)
+// ============================================
+
+/**
+ * Compare deux snapshots et retourne quelles sections ont changé
+ * @param {Object} current - Snapshot actuel
+ * @param {Object} previous - Snapshot précédent (peut être null)
+ * @returns {Object} changedSections
+ */
+function detectChanges(current, previous) {
+  // Premier rapport → tout afficher
+  if (!previous) {
+    return {
+      showUpcomingWeek: true,
+      showNextEvent: true,
+      showEmergencyFund: true,
+      showEconomicIndicators: true,
+      showBudgetStatus: true,
+      showObjectifs: true,
+      showTrajectory: true,
+      isFirstReport: true,
+      changedGoalNames: null
+    };
+  }
+
+  const changes = {
+    showUpcomingWeek: true,          // TOUJOURS (change chaque semaine)
+    showNextEvent: false,
+    showEmergencyFund: false,
+    showEconomicIndicators: true,    // TOUJOURS (marchés changent)
+    showBudgetStatus: false,
+    showObjectifs: false,
+    showTrajectory: false,
+    isFirstReport: false,
+    changedGoalNames: []
+  };
+
+  // --- ÉVÉNEMENT CALENDRIER ---
+  const currentEvent = current.nextEvent;
+  const prevEvent = previous.nextEvent;
+  if (currentEvent && !prevEvent) {
+    changes.showNextEvent = true;
+  } else if (currentEvent && prevEvent) {
+    if (currentEvent.name !== prevEvent.name) {
+      changes.showNextEvent = true; // L'événement a changé
+    } else {
+      const currentDays = currentEvent.daysUntil || 999;
+      const prevDays = prevEvent.daysUntil || 999;
+      // Afficher quand on franchit un seuil important (14 jours ou 7 jours)
+      if ((prevDays > 14 && currentDays <= 14) || (prevDays > 7 && currentDays <= 7)) {
+        changes.showNextEvent = true;
+      }
+    }
+  }
+
+  // --- FONDS D'URGENCE ---
+  const currentEF = current.emergencyFund;
+  const prevEF = previous.emergencyFund;
+  if (currentEF && !prevEF) {
+    changes.showEmergencyFund = true; // Nouvelle donnée (snapshot v1 → v2)
+  } else if (currentEF && prevEF) {
+    if (currentEF.status !== prevEF.status) {
+      changes.showEmergencyFund = true;
+    } else if (Math.abs(currentEF.moisSurvie - prevEF.moisSurvie) >= 0.5) {
+      changes.showEmergencyFund = true;
+    }
+    if (currentEF.status === 'critical') {
+      changes.showEmergencyFund = true; // Urgence → toujours rappeler
+    }
+  }
+
+  // --- BUDGET ---
+  if (current.budget && previous.budget) {
+    if (current.budget.status !== previous.budget.status) {
+      changes.showBudgetStatus = true;
+    }
+  }
+
+  // --- OBJECTIFS ---
+  if (current.objectifs && previous.objectifs) {
+    const changedGoals = current.objectifs.filter(g => {
+      const prev = previous.objectifs.find(p => p.nom === g.nom);
+      if (!prev) return true;                              // Nouvel objectif
+      if (g.isReached && !prev.isReached) return true;    // Vient d'être atteint
+      if (Math.abs(g.progress - prev.progress) >= 1) return true; // Progression >= 1%
+      return false;
+    });
+    changes.showObjectifs = changedGoals.length > 0;
+    changes.changedGoalNames = changedGoals.map(g => g.nom);
+  }
+
+  // --- TRAJECTOIRE ---
+  if (current.trajectoire6mois && previous.trajectoire6mois) {
+    const currentAlertes = current.trajectoire6mois.alertes?.length || 0;
+    const prevAlertes = previous.trajectoire6mois.alertes?.length || 0;
+    if (currentAlertes !== prevAlertes) {
+      changes.showTrajectory = true;
+    }
+  }
+
+  return changes;
+}
+
+// ============================================
 // SNAPSHOT PRINCIPAL
 // ============================================
 
@@ -449,13 +627,16 @@ async function buildFinancialSnapshot(userId) {
   const trajectoire6mois = calculateTrajectory6Months(accounts, soldes, budgetEntrees, budgetSorties);
 
   return {
-    version: 1,
+    version: 2,
     snapshotDate: new Date().toISOString(),
     comptes,
     portefeuille,
     budget,
     objectifs,
-    trajectoire6mois
+    trajectoire6mois,
+    emergencyFund: calculateEmergencyFund(comptes, budget),
+    semaineAVenir: calculateUpcomingWeek(budgetEntrees, budgetSorties)
+    // nextEvent est ajouté par communicationEmailService (il a accès aux CALENDAR_EVENTS)
   };
 }
 
@@ -628,6 +809,7 @@ function buildComparativeInsights(current, previous, lang = 'fr') {
 module.exports = {
   buildFinancialSnapshot,
   buildComparativeInsights,
+  detectChanges,
   calculatePortfolio,
   calculateBudgetSummary,
   calculateGoalsProgress,

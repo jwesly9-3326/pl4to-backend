@@ -6,6 +6,7 @@
 const express = require('express');
 const router = express.Router();
 const communicationService = require('../services/email/communicationEmailService');
+const { buildDailySummary, processDailySummaries } = require('../services/dailySummary.service');
 const prisma = require('../prisma-client');
 
 // Middleware auth (réutiliser celui existant)
@@ -284,5 +285,81 @@ function unsubscribePage(message, success) {
   </body>
   </html>`;
 }
+
+// ============================================
+// GET /api/communications/daily-summary
+// Résumé financier du jour pour l'utilisateur connecté
+// ============================================
+router.get('/daily-summary', authMiddleware, async (req, res) => {
+  try {
+    const summary = await buildDailySummary(req.user.id);
+    res.json({ success: true, data: summary });
+  } catch (error) {
+    console.error('[Communications] Erreur daily-summary:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// ============================================
+// GET /api/communications/daily-preferences
+// Préférences de résumé quotidien
+// ============================================
+router.get('/daily-preferences', authMiddleware, async (req, res) => {
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: req.user.id },
+      select: { dailySummaryEnabled: true, dailySummaryTime: true }
+    });
+    res.json({ success: true, data: user });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// ============================================
+// PUT /api/communications/daily-preferences
+// Met à jour les préférences de résumé quotidien
+// ============================================
+router.put('/daily-preferences', authMiddleware, async (req, res) => {
+  try {
+    const { dailySummaryEnabled, dailySummaryTime } = req.body;
+    const updateData = {};
+
+    if (dailySummaryEnabled !== undefined) updateData.dailySummaryEnabled = dailySummaryEnabled;
+    if (dailySummaryTime !== undefined) {
+      const hour = parseInt(dailySummaryTime);
+      if (hour >= 0 && hour <= 23) updateData.dailySummaryTime = hour;
+    }
+
+    const user = await prisma.user.update({
+      where: { id: req.user.id },
+      data: updateData,
+      select: { dailySummaryEnabled: true, dailySummaryTime: true }
+    });
+
+    res.json({ success: true, data: user });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// ============================================
+// POST /api/communications/trigger/daily
+// Déclenche l'envoi des résumés quotidiens (CRON)
+// ============================================
+router.post('/trigger/daily', async (req, res) => {
+  try {
+    const apiKey = req.headers['x-api-key'];
+    if (apiKey !== process.env.CRON_API_KEY) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const result = await processDailySummaries();
+    res.json({ success: true, ...result });
+  } catch (error) {
+    console.error('[Communications] Erreur trigger daily:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
 
 module.exports = router;

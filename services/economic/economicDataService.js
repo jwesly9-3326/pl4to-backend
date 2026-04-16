@@ -6,6 +6,7 @@ const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
 const { fetchAllSeries } = require('./providers/bankOfCanada');
+const { fetchAllSeries: fetchFredSeries } = require('./providers/fredApi');
 const { fetchMultiRegion, REGIONAL_VECTORS } = require('./providers/statcan');
 const { generateAlertsForIndicator, cleanExpiredAlerts } = require('./alertGenerator');
 
@@ -26,6 +27,19 @@ async function getActiveRegions() {
 }
 
 /**
+ * Vérifie s'il y a au moins un utilisateur aux États-Unis.
+ * Sert à éviter d'appeler FRED (et ses quotas) quand il n'y a pas d'users US.
+ */
+async function hasUSUsers() {
+  try {
+    const count = await prisma.user.count({ where: { country: 'US' } });
+    return count > 0;
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Orchestre la mise à jour complète des données économiques
  * Appelé par le CRON toutes les heures (mais skip si < 6h depuis le dernier fetch)
  */
@@ -43,16 +57,19 @@ async function processEconomicData() {
 
     // Régions actives (distinctes des users actuels)
     const activeRegions = await getActiveRegions();
-    console.log(`[📊 ECON] Début update - régions actives: ${activeRegions.join(', ')}`);
+    const usActive = await hasUSUsers();
+    console.log(`[📊 ECON] Début update - régions CA: ${activeRegions.join(', ')}${usActive ? ' | US: oui' : ''}`);
 
     // 1. Fetch toutes les sources en parallèle
-    // BoC = national (une seule fois). StatCan = une fois par région active.
-    const [bocData, statcanData] = await Promise.all([
+    // BoC = national CA (une seule fois). StatCan = une fois par région CA.
+    // FRED = national US (skip si aucun user US ou FRED_API_KEY absent).
+    const [bocData, statcanData, fredData] = await Promise.all([
       fetchAllSeries(),
-      fetchMultiRegion(activeRegions)
+      fetchMultiRegion(activeRegions),
+      usActive ? fetchFredSeries() : Promise.resolve([])
     ]);
 
-    const allData = [...bocData, ...statcanData];
+    const allData = [...bocData, ...statcanData, ...fredData];
     let updated = 0;
     let alertsGenerated = 0;
 
@@ -121,7 +138,7 @@ async function processEconomicData() {
       updated,
       alertsGenerated,
       expiredCleaned: cleaned,
-      sources: { boc: bocData.length, statcan: statcanData.length }
+      sources: { boc: bocData.length, statcan: statcanData.length, fred: fredData.length }
     };
 
     console.log(`[📊 ECON] Terminé: ${updated} indicateurs mis à jour, ${alertsGenerated} alertes générées`);

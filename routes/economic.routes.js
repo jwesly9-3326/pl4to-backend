@@ -13,7 +13,7 @@ const {
   markAlertRead,
   getEconomicSummary
 } = require('../services/economic/economicDataService');
-const { getQuebecBenchmarks } = require('../services/economic/quebecBenchmarks');
+const { getCanadaBenchmarks } = require('../services/economic/canadaBenchmarks');
 
 // ===================================================
 // GET /api/economic/indicators
@@ -117,13 +117,15 @@ router.get('/summary', authenticateToken, async (req, res) => {
 });
 
 // ===================================================
-// GET /api/economic/benchmarks
-// Retourne les benchmarks de dépenses moyennes du Québec (StatCan EDM)
-// Public — données gouvernementales, pas de JWT requis
+// GET /api/economic/benchmarks?province=QC
+// Retourne les benchmarks de dépenses moyennes pour une province canadienne
+// (StatCan EDM 2023 baseline QC, scalé par coût de vie provincial).
+// Public — données gouvernementales, pas de JWT requis.
 // ===================================================
 router.get('/benchmarks', async (req, res) => {
   try {
-    const benchmarks = getQuebecBenchmarks();
+    const province = req.query.province || 'QC';
+    const benchmarks = getCanadaBenchmarks(province);
     res.json({ success: true, data: benchmarks });
   } catch (error) {
     console.error('[❌ ECON] GET /benchmarks:', error.message);

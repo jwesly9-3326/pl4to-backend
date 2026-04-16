@@ -7,6 +7,7 @@ const prisma = new PrismaClient();
 
 const { fetchAllSeries } = require('./providers/bankOfCanada');
 const { fetchAllSeries: fetchFredSeries } = require('./providers/fredApi');
+const { fetchAllSeries: fetchBanxicoSeries } = require('./providers/banxicoApi');
 const { fetchMultiRegion, REGIONAL_VECTORS } = require('./providers/statcan');
 const { generateAlertsForIndicator, cleanExpiredAlerts } = require('./alertGenerator');
 
@@ -40,6 +41,19 @@ async function hasUSUsers() {
 }
 
 /**
+ * Vérifie s'il y a au moins un utilisateur au Mexique.
+ * Sert à éviter d'appeler Banxico quand il n'y a pas d'users MX.
+ */
+async function hasMXUsers() {
+  try {
+    const count = await prisma.user.count({ where: { country: 'MX' } });
+    return count > 0;
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Orchestre la mise à jour complète des données économiques
  * Appelé par le CRON toutes les heures (mais skip si < 6h depuis le dernier fetch)
  */
@@ -58,18 +72,21 @@ async function processEconomicData() {
     // Régions actives (distinctes des users actuels)
     const activeRegions = await getActiveRegions();
     const usActive = await hasUSUsers();
-    console.log(`[📊 ECON] Début update - régions CA: ${activeRegions.join(', ')}${usActive ? ' | US: oui' : ''}`);
+    const mxActive = await hasMXUsers();
+    console.log(`[📊 ECON] Début update - CA: ${activeRegions.join(', ')}${usActive ? ' | US: oui' : ''}${mxActive ? ' | MX: oui' : ''}`);
 
     // 1. Fetch toutes les sources en parallèle
     // BoC = national CA (une seule fois). StatCan = une fois par région CA.
     // FRED = national US (skip si aucun user US ou FRED_API_KEY absent).
-    const [bocData, statcanData, fredData] = await Promise.all([
+    // Banxico = national MX (skip si aucun user MX ou BANXICO_API_TOKEN absent).
+    const [bocData, statcanData, fredData, banxicoData] = await Promise.all([
       fetchAllSeries(),
       fetchMultiRegion(activeRegions),
-      usActive ? fetchFredSeries() : Promise.resolve([])
+      usActive ? fetchFredSeries() : Promise.resolve([]),
+      mxActive ? fetchBanxicoSeries() : Promise.resolve([])
     ]);
 
-    const allData = [...bocData, ...statcanData, ...fredData];
+    const allData = [...bocData, ...statcanData, ...fredData, ...banxicoData];
     let updated = 0;
     let alertsGenerated = 0;
 
@@ -138,7 +155,7 @@ async function processEconomicData() {
       updated,
       alertsGenerated,
       expiredCleaned: cleaned,
-      sources: { boc: bocData.length, statcan: statcanData.length, fred: fredData.length }
+      sources: { boc: bocData.length, statcan: statcanData.length, fred: fredData.length, banxico: banxicoData.length }
     };
 
     console.log(`[📊 ECON] Terminé: ${updated} indicateurs mis à jour, ${alertsGenerated} alertes générées`);

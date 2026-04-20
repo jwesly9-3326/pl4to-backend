@@ -1,4 +1,4 @@
-// 📧 PL4TO - Template Résumé Hebdomadaire GPS
+// 📧 PL4TO - Template Résumé Hebdomadaire (FR + EN)
 // Version 2: Confidentialité + Teaser pour engagement
 // Sections: Calendrier, Budget (status), Objectifs (%), Alertes (teaser)
 
@@ -23,7 +23,7 @@ function getCoachingMessage(report, lang) {
       );
     } else if (netChange < -100) {
       messages.push(isFr
-        ? `📊 Ta valeur nette a bougé de ${netChange.toLocaleString('fr-CA')} $ cette semaine. C'est normal — les fluctuations font partie du parcours.`
+        ? `📊 Ta valeur nette a bougé de ${netChange.toLocaleString('fr-CA')} $ cette semaine. C'est normal — les fluctuations font partie du budget.`
         : `📊 Your net worth moved by $${netChange.toLocaleString('en-CA')} this week. That's normal — fluctuations are part of the journey.`
       );
     }
@@ -82,7 +82,7 @@ function getCoachingMessage(report, lang) {
 const weeklyReportTemplate = {
   fr: {
     generate: (prenom, report, userId) => ({
-      subject: `🧭 ${prenom}, voici ton résumé hebdo PL4TO`,
+      subject: `📊 ${prenom}, voici ton résumé de la semaine`,
       html: `
       <!DOCTYPE html>
       <html>
@@ -99,7 +99,7 @@ const weeklyReportTemplate = {
               PL4T<span style="color: #fbbf24;">O</span>
             </h1>
             <p style="color: #999; font-size: 14px; margin-top: 5px;">
-              Le GPS pour ton portefeuille
+              La plateforme qui s'occupe de ton budget
             </p>
           </div>
           
@@ -166,6 +166,44 @@ const weeklyReportTemplate = {
               `).join('')}
             </div>`;
           })()}
+
+          <!-- 💰 SECTION: Économies possibles cette semaine -->
+          ${report.savingsOpportunities && report.savingsOpportunities.length > 0 ? `
+          <div style="background: linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%); border-radius: 16px; padding: 24px; margin-bottom: 15px; border: 1px solid #bbf7d0;">
+            <p style="color: #166534; font-size: 13px; text-transform: uppercase; letter-spacing: 1px; margin: 0 0 14px 0; font-weight: bold;">
+              💰 Tes économies possibles
+            </p>
+            ${report.savingsOpportunities.map(opp => `
+            <div style="margin-bottom: 10px; padding: 10px 14px; background: rgba(255,255,255,0.7); border-radius: 10px;">
+              <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse: collapse;">
+                <tr>
+                  <td style="color: #333; font-size: 14px; font-weight: 600;">
+                    ${opp.icon} ${opp.category}
+                  </td>
+                  <td style="text-align: right;">
+                    <span style="color: #22c55e; font-size: 14px; font-weight: 700;">
+                      ~${opp.savingsAmount}$/mois
+                    </span>
+                  </td>
+                </tr>
+                <tr>
+                  <td colspan="2" style="color: #666; font-size: 12px; padding-top: 4px;">
+                    ${opp.tip}
+                  </td>
+                </tr>
+              </table>
+            </div>
+            `).join('')}
+            <div style="margin-top: 12px; padding-top: 10px; border-top: 1px solid #bbf7d0; text-align: center;">
+              <p style="color: #15803d; font-size: 15px; font-weight: 700; margin: 0;">
+                💡 Potentiel: ${report.totalPotentialSavings}$/an d'économies
+              </p>
+              <p style="color: #666; font-size: 12px; margin: 4px 0 0 0;">
+                Ouvre PL4TO pour appliquer ces économies à ton budget
+              </p>
+            </div>
+          </div>
+          ` : ''}
 
           <!-- 📅 SECTION 2: Prochain événement (seulement si changé) -->
           ${report.changedSections.showNextEvent && report.nextEvent ? `
@@ -273,18 +311,18 @@ const weeklyReportTemplate = {
           ${report.changedSections.showTrajectory ? `
           <div style="background: ${report.alertesCount > 0 ? '#fef2f2' : '#fffbeb'}; border-radius: 16px; padding: 24px; margin-bottom: 15px; border: 1px solid ${report.alertesCount > 0 ? '#fecaca' : '#fef3c7'};">
             <p style="color: #999; font-size: 13px; text-transform: uppercase; letter-spacing: 1px; margin: 0 0 12px 0;">
-              🚦 Trajectoire financière
+              🚦 Ton budget dans le temps
             </p>
             ${report.alertesCount > 0 ? `
             <p style="color: #ef4444; font-size: 15px; font-weight: bold; margin: 0 0 6px 0;">
               ⚠️ ${report.alertesCount} alerte${report.alertesCount > 1 ? 's' : ''} détectée${report.alertesCount > 1 ? 's' : ''} dans les 6 prochains mois
             </p>
             <p style="color: #666; font-size: 14px; line-height: 1.5; margin: 0;">
-              Consulte ton GPS pour voir les détails et ajuster ta route.
+              Consulte PL4TO pour voir les détails et ajuster ton budget.
             </p>
             ` : `
             <p style="color: #333; font-size: 15px; line-height: 1.6; margin: 0;">
-              ✅ Aucune alerte sur ta trajectoire. Bonne route!
+              ✅ Aucune alerte détectée. Continue comme ça!
             </p>
             `}
           </div>
@@ -300,7 +338,7 @@ const weeklyReportTemplate = {
               Tout est stable cette semaine
             </p>
             <p style="color: #666; font-size: 14px; margin: 0;">
-              Ton budget, tes objectifs et ta trajectoire sont dans la même direction. Continue!
+              Ton budget et tes objectifs avancent bien. Continue!
             </p>
           </div>
           ` : ''}
@@ -308,9 +346,11 @@ const weeklyReportTemplate = {
           <!-- CTA -->
           <div style="text-align: center; margin-bottom: 35px;">
             <p style="color: #666; font-size: 14px; text-align: center; margin: 0 0 15px 0;">
-              ${report.comparisons?.valeurNetteChange > 0
-                ? '📈 Ta trajectoire progresse — viens voir le détail!'
-                : '🧭 Ton GPS financier t\'attend — navigue dans ta semaine!'}
+              ${report.totalPotentialSavings > 0
+                ? `💡 Tu pourrais économiser ${report.totalPotentialSavings}$/an — viens voir comment!`
+                : report.comparisons?.valeurNetteChange > 0
+                  ? '📈 Ton budget évolue — viens voir le détail!'
+                  : '📊 Ton résumé t\'attend — viens voir tes prévisions!'}
             </p>
             <a href="${FRONTEND_URL}" style="display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #ffffff; padding: 16px 40px; border-radius: 50px; text-decoration: none; font-weight: bold; font-size: 16px; box-shadow: 0 6px 20px rgba(102, 126, 234, 0.3);">
               <!--[if mso]><i style="mso-font-width:200%;mso-text-raise:30pt">&nbsp;</i><![endif]-->
@@ -337,7 +377,7 @@ const weeklyReportTemplate = {
           <!-- Footer -->
           <div style="text-align: center; padding-top: 20px; border-top: 1px solid #e9ecef;">
             <p style="color: #999; font-size: 13px; margin: 0 0 8px 0;">
-              PL4T<span style="color: #fbbf24;">O</span> — Le GPS pour ton portefeuille
+              PL4T<span style="color: #fbbf24;">O</span> — La plateforme qui s'occupe de ton budget
             </p>
             <p style="color: #bbb; font-size: 12px; margin: 0;">
               <a href="${BACKEND_URL}/api/communications/unsubscribe?userId=${userId}&type=weekly" style="color: #bbb; text-decoration: underline;">Se désabonner du résumé hebdomadaire</a>
@@ -352,7 +392,7 @@ const weeklyReportTemplate = {
   },
   en: {
     generate: (prenom, report, userId) => ({
-      subject: `🧭 ${prenom}, here's your weekly PL4TO summary`,
+      subject: `📊 ${prenom}, here's your weekly summary`,
       html: `
       <!DOCTYPE html>
       <html>
@@ -369,7 +409,7 @@ const weeklyReportTemplate = {
               PL4T<span style="color: #fbbf24;">O</span>
             </h1>
             <p style="color: #999; font-size: 14px; margin-top: 5px;">
-              The GPS for your wallet
+              The platform that takes care of your budget
             </p>
           </div>
           
@@ -436,6 +476,44 @@ const weeklyReportTemplate = {
               `).join('')}
             </div>`;
           })()}
+
+          <!-- 💰 SECTION: Potential savings this week -->
+          ${report.savingsOpportunities && report.savingsOpportunities.length > 0 ? `
+          <div style="background: linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%); border-radius: 16px; padding: 24px; margin-bottom: 15px; border: 1px solid #bbf7d0;">
+            <p style="color: #166534; font-size: 13px; text-transform: uppercase; letter-spacing: 1px; margin: 0 0 14px 0; font-weight: bold;">
+              💰 Your potential savings
+            </p>
+            ${report.savingsOpportunities.map(opp => `
+            <div style="margin-bottom: 10px; padding: 10px 14px; background: rgba(255,255,255,0.7); border-radius: 10px;">
+              <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse: collapse;">
+                <tr>
+                  <td style="color: #333; font-size: 14px; font-weight: 600;">
+                    ${opp.icon} ${opp.category}
+                  </td>
+                  <td style="text-align: right;">
+                    <span style="color: #22c55e; font-size: 14px; font-weight: 700;">
+                      ~$${opp.savingsAmount}/mo
+                    </span>
+                  </td>
+                </tr>
+                <tr>
+                  <td colspan="2" style="color: #666; font-size: 12px; padding-top: 4px;">
+                    ${opp.tip}
+                  </td>
+                </tr>
+              </table>
+            </div>
+            `).join('')}
+            <div style="margin-top: 12px; padding-top: 10px; border-top: 1px solid #bbf7d0; text-align: center;">
+              <p style="color: #15803d; font-size: 15px; font-weight: 700; margin: 0;">
+                💡 Potential: $${report.totalPotentialSavings}/year in savings
+              </p>
+              <p style="color: #666; font-size: 12px; margin: 4px 0 0 0;">
+                Open PL4TO to apply these savings to your budget
+              </p>
+            </div>
+          </div>
+          ` : ''}
 
           <!-- 📅 SECTION 2: Next event (only if changed) -->
           ${report.changedSections.showNextEvent && report.nextEvent ? `
@@ -543,18 +621,18 @@ const weeklyReportTemplate = {
           ${report.changedSections.showTrajectory ? `
           <div style="background: ${report.alertesCount > 0 ? '#fef2f2' : '#fffbeb'}; border-radius: 16px; padding: 24px; margin-bottom: 15px; border: 1px solid ${report.alertesCount > 0 ? '#fecaca' : '#fef3c7'};">
             <p style="color: #999; font-size: 13px; text-transform: uppercase; letter-spacing: 1px; margin: 0 0 12px 0;">
-              🚦 Financial trajectory
+              🚦 Your budget over time
             </p>
             ${report.alertesCount > 0 ? `
             <p style="color: #ef4444; font-size: 15px; font-weight: bold; margin: 0 0 6px 0;">
               ⚠️ ${report.alertesCount} alert${report.alertesCount > 1 ? 's' : ''} detected in the next 6 months
             </p>
             <p style="color: #666; font-size: 14px; line-height: 1.5; margin: 0;">
-              Check your GPS to see the details and adjust your route.
+              Check PL4TO to see the details and adjust your budget.
             </p>
             ` : `
             <p style="color: #333; font-size: 15px; line-height: 1.6; margin: 0;">
-              ✅ No alerts on your trajectory. Smooth sailing!
+              ✅ No alerts detected. Keep it up!
             </p>
             `}
           </div>
@@ -570,7 +648,7 @@ const weeklyReportTemplate = {
               Everything is stable this week
             </p>
             <p style="color: #666; font-size: 14px; margin: 0;">
-              Your budget, goals and trajectory are all on track. Keep it up!
+              Your budget and goals are progressing well. Keep it up!
             </p>
           </div>
           ` : ''}
@@ -578,9 +656,11 @@ const weeklyReportTemplate = {
           <!-- CTA -->
           <div style="text-align: center; margin-bottom: 35px;">
             <p style="color: #666; font-size: 14px; text-align: center; margin: 0 0 15px 0;">
-              ${report.comparisons?.valeurNetteChange > 0
-                ? '📈 Your trajectory is progressing — come see the details!'
-                : '🧭 Your financial GPS awaits — navigate your week!'}
+              ${report.totalPotentialSavings > 0
+                ? `💡 You could save $${report.totalPotentialSavings}/year — come see how!`
+                : report.comparisons?.valeurNetteChange > 0
+                  ? '📈 Your budget is evolving — come see the details!'
+                  : '📊 Your summary is ready — come see your forecast!'}
             </p>
             <a href="${FRONTEND_URL}" style="display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #ffffff; padding: 16px 40px; border-radius: 50px; text-decoration: none; font-weight: bold; font-size: 16px; box-shadow: 0 6px 20px rgba(102, 126, 234, 0.3);">
               <!--[if mso]><i style="mso-font-width:200%;mso-text-raise:30pt">&nbsp;</i><![endif]-->
@@ -607,7 +687,7 @@ const weeklyReportTemplate = {
           <!-- Footer -->
           <div style="text-align: center; padding-top: 20px; border-top: 1px solid #e9ecef;">
             <p style="color: #999; font-size: 13px; margin: 0 0 8px 0;">
-              PL4T<span style="color: #fbbf24;">O</span> — The GPS for your wallet
+              PL4T<span style="color: #fbbf24;">O</span> — The platform that takes care of your budget
             </p>
             <p style="color: #bbb; font-size: 12px; margin: 0;">
               <a href="${BACKEND_URL}/api/communications/unsubscribe?userId=${userId}&type=weekly" style="color: #bbb; text-decoration: underline;">Unsubscribe from weekly reports</a>

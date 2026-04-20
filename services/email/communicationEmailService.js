@@ -57,8 +57,8 @@ const CALENDAR_EVENTS = [
     color: '#f97316',
     greeting_fr: 'Le printemps est arrivé!',
     greeting_en: 'Spring has arrived!',
-    funFact_fr: 'Le printemps est souvent synonyme de dépenses imprévues: entretien de la cour, nettoyage, équipements... PL4TO les avait déjà intégrées dans ta trajectoire! 🌱',
-    funFact_en: 'Spring often brings unexpected expenses: yard work, cleaning, equipment... PL4TO had already factored them into your trajectory! 🌱'
+    funFact_fr: 'Le printemps est souvent synonyme de dépenses imprévues: entretien de la cour, nettoyage, équipements... PL4TO les avait déjà intégrées dans ton budget! 🌱',
+    funFact_en: 'Spring often brings unexpected expenses: yard work, cleaning, equipment... PL4TO had already factored them into your budget! 🌱'
   },
   {
     id: 'paques',
@@ -93,8 +93,8 @@ const CALENDAR_EVENTS = [
     color: '#ec4899',
     greeting_fr: 'Bonne Fête des Mères!',
     greeting_en: 'Happy Mother\'s Day!',
-    funFact_fr: 'Les Canadiens dépensent en moyenne 120$ pour la Fête des Mères. PL4TO avait déjà prévu cette attention dans ta trajectoire! 💐',
-    funFact_en: 'Canadians spend an average of $120 on Mother\'s Day. PL4TO already planned this treat in your trajectory! 💐'
+    funFact_fr: 'Les Canadiens dépensent en moyenne 120$ pour la Fête des Mères. PL4TO avait déjà prévu cette attention dans ton budget! 💐',
+    funFact_en: 'Canadians spend an average of $120 on Mother\'s Day. PL4TO already planned this treat in your budget! 💐'
   },
   {
     id: 'fete-peres',
@@ -147,8 +147,8 @@ const CALENDAR_EVENTS = [
     color: '#ef4444',
     greeting_fr: 'Bonne Fête du Canada!',
     greeting_en: 'Happy Canada Day!',
-    funFact_fr: 'BBQ, feux d\'artifice, festivités... PL4TO avait intégré cette journée dans ta trajectoire depuis longtemps! 🇨🇦',
-    funFact_en: 'BBQ, fireworks, celebrations... PL4TO had this day in your trajectory all along! 🇨🇦'
+    funFact_fr: 'BBQ, feux d\'artifice, festivités... PL4TO avait intégré cette journée dans ton budget depuis longtemps! 🇨🇦',
+    funFact_en: 'BBQ, fireworks, celebrations... PL4TO had this day in your budget all along! 🇨🇦'
   },
   {
     id: 'rentree',
@@ -165,8 +165,8 @@ const CALENDAR_EVENTS = [
     color: '#8b5cf6',
     greeting_fr: 'Bonne rentrée!',
     greeting_en: 'Happy Back to School!',
-    funFact_fr: 'La rentrée coûte en moyenne 400$ par enfant au Canada. PL4TO avait déjà intégré ces dépenses dans ta trajectoire depuis des mois! 🎒',
-    funFact_en: 'Back to school costs an average of $400 per child in Canada. PL4TO had factored these expenses into your trajectory months ago! 🎒'
+    funFact_fr: 'La rentrée coûte en moyenne 400$ par enfant au Canada. PL4TO avait déjà intégré ces dépenses dans ton budget depuis des mois! 🎒',
+    funFact_en: 'Back to school costs an average of $400 per child in Canada. PL4TO had factored these expenses into your budget months ago! 🎒'
   },
   {
     id: 'fete-travail',
@@ -219,8 +219,8 @@ const CALENDAR_EVENTS = [
     color: '#f59e0b',
     greeting_fr: 'Joyeuse Action de Grâce!',
     greeting_en: 'Happy Thanksgiving!',
-    funFact_fr: 'Un repas de Thanksgiving moyen coûte 50-80$ en épicerie. PL4TO l\'avait intégré dans ta trajectoire! 🦃',
-    funFact_en: 'An average Thanksgiving meal costs $50-80 in groceries. PL4TO factored it into your trajectory! 🦃'
+    funFact_fr: 'Un repas de Thanksgiving moyen coûte 50-80$ en épicerie. PL4TO l\'avait intégré dans ton budget! 🦃',
+    funFact_en: 'An average Thanksgiving meal costs $50-80 in groceries. PL4TO factored it into your budget! 🦃'
   },
   {
     id: 'noel',
@@ -718,6 +718,78 @@ async function buildUserReport(userId, lang = 'fr', options = {}) {
 
       report.budgetStatus = hasOrange ? 'unbalanced' : 'balanced';
     }
+
+    // 💰 Économies possibles — même logique que frontend/smartWidgets.js
+    const savingsOpportunities = [];
+    const groceryKeywords = ['épicerie', 'epicerie', 'grocery', 'alimentation', 'nourriture',
+      'supermarché', 'supermarche', 'maxi', 'iga', 'metro', 'provigo', 'costco', 'walmart',
+      'loblaws', 'sobeys', 'safeway', 'food', 'groceries'];
+    const gasKeywords = ['essence', 'gas', 'gasolina', 'fuel', 'station', 'petro',
+      'shell', 'esso', 'ultramar', 'couche-tard'];
+    const phoneKeywords = ['téléphone', 'telephone', 'cell', 'cellulaire', 'mobile', 'phone',
+      'vidéotron', 'videotron', 'fizz', 'bell', 'rogers', 'telus', 'internet'];
+
+    const findCategoryAmount = (keywords) => {
+      return budgetSorties
+        .filter(s => keywords.some(kw => (s.description || '').toLowerCase().includes(kw)))
+        .reduce((total, item) => total + calcMensuel(item.montant, item.frequence), 0);
+    };
+
+    const groceryAmount = findCategoryAmount(groceryKeywords);
+    if (groceryAmount > 0) {
+      savingsOpportunities.push({
+        icon: '🛒',
+        category: lang === 'fr' ? 'Épicerie' : 'Groceries',
+        monthlyAmount: Math.round(groceryAmount),
+        savingsAmount: Math.round(groceryAmount * 0.15),
+        savingsAnnual: Math.round(groceryAmount * 0.15 * 12),
+        tip: lang === 'fr'
+          ? 'Consulte les rabais de la semaine avant de faire ton épicerie'
+          : 'Check weekly deals before grocery shopping'
+      });
+    }
+
+    const gasAmount = findCategoryAmount(gasKeywords);
+    if (gasAmount > 0) {
+      // Chercher le prix d'essence dans les indicateurs économiques (StatCan)
+      let fuelPrice = null;
+      try {
+        const fuelIndicator = await prisma.economicIndicator.findFirst({
+          where: { category: 'fuel' },
+          orderBy: { fetchedAt: 'desc' }
+        });
+        if (fuelIndicator) fuelPrice = (parseFloat(fuelIndicator.value) / 100).toFixed(2);
+      } catch (_) { /* no-op */ }
+
+      savingsOpportunities.push({
+        icon: '⛽',
+        category: lang === 'fr' ? 'Essence' : 'Gas',
+        monthlyAmount: Math.round(gasAmount),
+        savingsAmount: Math.round(gasAmount * 0.10),
+        savingsAnnual: Math.round(gasAmount * 0.10 * 12),
+        fuelPrice,
+        tip: lang === 'fr'
+          ? `Compare les prix avant de faire le plein${fuelPrice ? ` (${fuelPrice}$/L cette semaine)` : ''}`
+          : `Compare prices before filling up${fuelPrice ? ` ($${fuelPrice}/L this week)` : ''}`
+      });
+    }
+
+    const phoneAmount = findCategoryAmount(phoneKeywords);
+    if (phoneAmount > 0) {
+      savingsOpportunities.push({
+        icon: '📱',
+        category: lang === 'fr' ? 'Téléphone' : 'Phone',
+        monthlyAmount: Math.round(phoneAmount),
+        savingsAmount: Math.round(phoneAmount * 0.20),
+        savingsAnnual: Math.round(phoneAmount * 0.20 * 12),
+        tip: lang === 'fr'
+          ? 'As-tu comparé les forfaits récemment?'
+          : 'Have you compared plans recently?'
+      });
+    }
+
+    report.savingsOpportunities = savingsOpportunities;
+    report.totalPotentialSavings = savingsOpportunities.reduce((s, o) => s + o.savingsAnnual, 0);
 
     // Objectifs - progression % seulement
     const goals = financialGoals || [];

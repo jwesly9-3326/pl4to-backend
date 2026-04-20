@@ -40,7 +40,8 @@ const CALENDAR_EVENTS = [
     greeting_fr: 'Bonne Saint-Valentin!',
     greeting_en: 'Happy Valentine\'s Day!',
     funFact_fr: 'PL4TO avait déjà planifié cette journée pour cette belle facture rose. Souper romantique, cadeaux... tout était prévu dans ton calendrier bien avant aujourd\'hui. 😏',
-    funFact_en: 'PL4TO had already planned this day for that lovely pink expense. Romantic dinner, gifts... it was all in your calendar well before today. 😏'
+    funFact_en: 'PL4TO had already planned this day for that lovely pink expense. Romantic dinner, gifts... it was all in your calendar well before today. 😏',
+    countries: ["CA","US","MX"]
   },
   {
     id: 'printemps',
@@ -58,7 +59,8 @@ const CALENDAR_EVENTS = [
     greeting_fr: 'Le printemps est arrivé!',
     greeting_en: 'Spring has arrived!',
     funFact_fr: 'Le printemps est souvent synonyme de dépenses imprévues: entretien de la cour, nettoyage, équipements... PL4TO les avait déjà intégrées dans ton budget! 🌱',
-    funFact_en: 'Spring often brings unexpected expenses: yard work, cleaning, equipment... PL4TO had already factored them into your budget! 🌱'
+    funFact_en: 'Spring often brings unexpected expenses: yard work, cleaning, equipment... PL4TO had already factored them into your budget! 🌱',
+    countries: ["CA","US"]
   },
   {
     id: 'paques',
@@ -76,7 +78,8 @@ const CALENDAR_EVENTS = [
     greeting_fr: 'Joyeuses Pâques!',
     greeting_en: 'Happy Easter!',
     funFact_fr: 'Saviez-vous que les Canadiens dépensent en moyenne 20$ en chocolats à Pâques? PL4TO avait déjà prévu cette douce dépense! 🍫',
-    funFact_en: 'Did you know Canadians spend an average of $20 on Easter chocolate? PL4TO had already planned for this sweet expense! 🍫'
+    funFact_en: 'Did you know Canadians spend an average of $20 on Easter chocolate? PL4TO had already planned for this sweet expense! 🍫',
+    countries: ["CA","US","MX"]
   },
   {
     id: 'fete-meres',
@@ -94,7 +97,8 @@ const CALENDAR_EVENTS = [
     greeting_fr: 'Bonne Fête des Mères!',
     greeting_en: 'Happy Mother\'s Day!',
     funFact_fr: 'Les Canadiens dépensent en moyenne 120$ pour la Fête des Mères. PL4TO avait déjà prévu cette attention dans ton budget! 💐',
-    funFact_en: 'Canadians spend an average of $120 on Mother\'s Day. PL4TO already planned this treat in your budget! 💐'
+    funFact_en: 'Canadians spend an average of $120 on Mother\'s Day. PL4TO already planned this treat in your budget! 💐',
+    countries: ["CA","US"]
   },
   {
     id: 'fete-peres',
@@ -112,7 +116,8 @@ const CALENDAR_EVENTS = [
     greeting_fr: 'Bonne Fête des Pères!',
     greeting_en: 'Happy Father\'s Day!',
     funFact_fr: 'Un bon repas, une activité ensemble... PL4TO avait déjà prévu le budget pour cette journée spéciale! 🎣',
-    funFact_en: 'A good meal, an activity together... PL4TO had already budgeted for this special day! 🎣'
+    funFact_en: 'A good meal, an activity together... PL4TO had already budgeted for this special day! 🎣',
+    countries: ["CA","US"]
   },
   {
     id: 'fete-nationale',
@@ -130,7 +135,8 @@ const CALENDAR_EVENTS = [
     greeting_fr: 'Bonne Saint-Jean!',
     greeting_en: 'Happy National Holiday!',
     funFact_fr: 'L\'été est la saison où les dépenses de loisirs augmentent le plus. PL4TO avait prévu le coup pour que tu profites sans stress! ☀️',
-    funFact_en: 'Summer is when leisure spending peaks. PL4TO planned ahead so you can enjoy stress-free! ☀️'
+    funFact_en: 'Summer is when leisure spending peaks. PL4TO planned ahead so you can enjoy stress-free! ☀️',
+    countries: ["CA"]
   },
   {
     id: 'canada-day',
@@ -148,7 +154,8 @@ const CALENDAR_EVENTS = [
     greeting_fr: 'Bonne Fête du Canada!',
     greeting_en: 'Happy Canada Day!',
     funFact_fr: 'BBQ, feux d\'artifice, festivités... PL4TO avait intégré cette journée dans ton budget depuis longtemps! 🇨🇦',
-    funFact_en: 'BBQ, fireworks, celebrations... PL4TO had this day in your budget all along! 🇨🇦'
+    funFact_en: 'BBQ, fireworks, celebrations... PL4TO had this day in your budget all along! 🇨🇦',
+    countries: ["CA"]
   },
   {
     id: 'rentree',
@@ -166,7 +173,8 @@ const CALENDAR_EVENTS = [
     greeting_fr: 'Bonne rentrée!',
     greeting_en: 'Happy Back to School!',
     funFact_fr: 'La rentrée coûte en moyenne 400$ par enfant au Canada. PL4TO avait déjà intégré ces dépenses dans ton budget depuis des mois! 🎒',
-    funFact_en: 'Back to school costs an average of $400 per child in Canada. PL4TO had factored these expenses into your budget months ago! 🎒'
+    funFact_en: 'Back to school costs an average of $400 per child in Canada. PL4TO had factored these expenses into your budget months ago! 🎒',
+    countries: ["CA","US","MX"]
   },
   {
     id: 'fete-travail',
@@ -184,7 +192,8 @@ const CALENDAR_EVENTS = [
     greeting_fr: 'Bonne Fête du Travail!',
     greeting_en: 'Happy Labour Day!',
     funFact_fr: 'La Fête du Travail marque la fin de l\'été et le début d\'une nouvelle routine. PL4TO est prêt! 🍂',
-    funFact_en: 'Labour Day marks the end of summer and a new routine. PL4TO is ready! 🍂'
+    funFact_en: 'Labour Day marks the end of summer and a new routine. PL4TO is ready! 🍂',
+    countries: ["CA","US"]
   },
   {
     id: 'halloween',
@@ -202,7 +211,8 @@ const CALENDAR_EVENTS = [
     greeting_fr: 'Joyeuse Halloween!',
     greeting_en: 'Happy Halloween!',
     funFact_fr: 'Halloween est devenu la 2e fête la plus dépensière après Noël en Amérique du Nord. Costumes, bonbons, décor... PL4TO avait tout prévu! 👻',
-    funFact_en: 'Halloween has become the 2nd most expensive holiday after Christmas in North America. Costumes, candy, decor... PL4TO had it all planned! 👻'
+    funFact_en: 'Halloween has become the 2nd most expensive holiday after Christmas in North America. Costumes, candy, decor... PL4TO had it all planned! 👻',
+    countries: ["CA","US"]
   },
   {
     id: 'action-grace',
@@ -220,7 +230,8 @@ const CALENDAR_EVENTS = [
     greeting_fr: 'Joyeuse Action de Grâce!',
     greeting_en: 'Happy Thanksgiving!',
     funFact_fr: 'Un repas de Thanksgiving moyen coûte 50-80$ en épicerie. PL4TO l\'avait intégré dans ton budget! 🦃',
-    funFact_en: 'An average Thanksgiving meal costs $50-80 in groceries. PL4TO factored it into your budget! 🦃'
+    funFact_en: 'An average Thanksgiving meal costs $50-80 in groceries. PL4TO factored it into your budget! 🦃',
+    countries: ["CA"]
   },
   {
     id: 'noel',
@@ -238,7 +249,8 @@ const CALENDAR_EVENTS = [
     greeting_fr: 'Joyeux Noël!',
     greeting_en: 'Merry Christmas!',
     funFact_fr: 'Les Canadiens dépensent en moyenne 1 500$ pour les fêtes. PL4TO t\'avait préparé pour ce moment depuis le début de l\'année! 🎁',
-    funFact_en: 'Canadians spend an average of $1,500 on the holidays. PL4TO has been preparing you for this moment since the start of the year! 🎁'
+    funFact_en: 'Canadians spend an average of $1,500 on the holidays. PL4TO has been preparing you for this moment since the start of the year! 🎁',
+    countries: ["CA","US","MX"]
   }
 ];
 
@@ -285,18 +297,25 @@ function getTodaysEvent() {
 
 /**
  * Trouve le prochain événement après aujourd'hui
+ * @param {string} lang
+ * @param {string} country - Filtre par pays (CA/US/MX). Défaut: CA.
  */
-function getNextEvent(lang = 'fr') {
+function getNextEvent(lang = 'fr', country = 'CA') {
   const today = new Date();
   const currentMonth = today.getMonth() + 1;
   const currentDay = today.getDate();
-  
+
+  // Filtrer par pays de l'utilisateur (événements sans countries = universels)
+  const filtered = CALENDAR_EVENTS.filter(e =>
+    !e.countries || e.countries.includes(country)
+  );
+
   // Trier les événements par date
-  const sorted = [...CALENDAR_EVENTS].sort((a, b) => {
+  const sorted = [...filtered].sort((a, b) => {
     if (a.date.month !== b.date.month) return a.date.month - b.date.month;
     return a.date.day - b.date.day;
   });
-  
+
   // Trouver le prochain
   let next = sorted.find(e => {
     if (e.date.month > currentMonth) return true;
@@ -361,24 +380,32 @@ async function sendCalendarEventEmails() {
     return { sent: 0 };
   }
   
-  console.log(`[Communication] 📅 Événement du jour: ${event.name_fr || event.name}`);
-  
-  // Trouver les utilisateurs opt-in pour emails calendrier
+  console.log(`[Communication] 📅 Événement du jour: ${event.name_fr || event.name}${event.countries ? ` (${event.countries.join('/')})` : ''}`);
+
+  // Filtrer par pays si l'événement est régional (évite d'envoyer la Saint-Jean
+  // à un user MX ou Canada Day à un user US). Absence de countries = universel.
+  const countryFilter = event.countries
+    ? { country: { in: event.countries } }
+    : {};
+
+  // Trouver les utilisateurs opt-in pour emails calendrier (filtrés par pays)
   const users = await prisma.user.findMany({
     where: {
       calendarEmailEnabled: true,
       emailVerified: true,
-      emailOptOut: false
+      emailOptOut: false,
+      ...countryFilter
     },
     select: {
       id: true,
       prenom: true,
       email: true,
-      language: true
+      language: true,
+      country: true
     }
   });
-  
-  console.log(`[Communication] ${users.length} utilisateurs opt-in pour emails calendrier`);
+
+  console.log(`[Communication] ${users.length} utilisateurs opt-in${event.countries ? ` (filtrés par pays ${event.countries.join('/')})` : ''}`);
   
   let sent = 0;
   let errors = 0;
@@ -402,7 +429,7 @@ async function sendCalendarEventEmails() {
       
       const lang = user.language || 'fr';
       const template = calendarEventTemplate[lang] || calendarEventTemplate.fr;
-      const nextEvent = getNextEvent(lang);
+      const nextEvent = getNextEvent(lang, user.country || 'CA');
       
       const eventData = {
         emoji: event.emoji,
@@ -481,6 +508,7 @@ async function sendWeeklyReportEmails() {
       prenom: true,
       email: true,
       language: true,
+      country: true,
       lastWeeklyReportAt: true,
       subscriptionPlan: true
     }
@@ -511,8 +539,8 @@ async function sendWeeklyReportEmails() {
         snapshot = await buildFinancialSnapshot(user.id);
 
         if (snapshot) {
-          // Ajouter le prochain événement (avec daysUntil pour la comparaison)
-          snapshot.nextEvent = getNextEvent(lang);
+          // Ajouter le prochain événement (filtré par pays de l'utilisateur)
+          snapshot.nextEvent = getNextEvent(lang, user.country || 'CA');
 
           // Chercher le snapshot précédent pour comparaison
           const previousSnapshot = await prisma.weeklyReportSnapshot.findFirst({
@@ -538,7 +566,10 @@ async function sendWeeklyReportEmails() {
       }
 
       // Construire le rapport enrichi
-      const report = await buildUserReport(user.id, lang, { snapshot, comparativeInsights, changedSections });
+      const report = await buildUserReport(user.id, lang, {
+        snapshot, comparativeInsights, changedSections,
+        country: user.country || 'CA'
+      });
 
       const { subject, html } = template.generate(user.prenom, report, user.id);
 
@@ -628,7 +659,7 @@ async function sendWeeklyReportEmails() {
 // CONSTRUIRE LE RAPPORT UTILISATEUR
 // ============================================
 async function buildUserReport(userId, lang = 'fr', options = {}) {
-  const { snapshot = null, comparativeInsights = null, changedSections = null } = options;
+  const { snapshot = null, comparativeInsights = null, changedSections = null, country = 'CA' } = options;
 
   // Récupérer les données utilisateur
   const userData = await prisma.userData.findUnique({
@@ -652,7 +683,7 @@ async function buildUserReport(userId, lang = 'fr', options = {}) {
     weekStart: getWeekStart(lang),
     budgetStatus: null,
     objectifs: [],
-    nextEvent: snapshot?.nextEvent || getNextEvent(lang),
+    nextEvent: snapshot?.nextEvent || getNextEvent(lang, country),
     highlights: [],
     comparisons: null,
     alertesCount: 0,
